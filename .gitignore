@@ -1,5 +1,7 @@
 venv/
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 data/media/*
@@ -7,3 +9,12 @@ data/media/*
 data/exports/*
 !data/exports/.gitkeep
 .pytest_cache/
+
+# Secretos — NUNCA subir a GitHub
+*.pem
+*.key
+gcp-key.json
+*credentials*
+*secret*
+*.p12
+service-account*.json
