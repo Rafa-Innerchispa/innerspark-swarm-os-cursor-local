@@ -1,5 +1,17 @@
 # Recuperación ante desastre — 192.168.1.4
 
+## Cuenta Google configurada en el servidor
+
+| Remoto rclone | Estado | Carpetas visibles |
+|---------------|--------|-------------------|
+| **Ralphi-IA-Gdrive** | Activo (principal) | PC-Doctor Historico, InnerSpark, InnerChispa, Domotika, Google AI Studio... |
+| Gdrive | Secundario / no usado por defecto | — |
+
+Los respaldos disaster recovery suben a:
+```
+Ralphi-IA-Gdrive:RalphiIA_Backups/disaster_recovery/
+```
+
 ## ¿Qué respaldos existen HOY?
 
 | Qué | Dónde | Frecuencia | Cubre Swarm-OS |
@@ -7,7 +19,7 @@
 | Ralphi operacional | `ralphi_backups/` → Google Drive | 3x/día (8,14,22h) | NO |
 | Ralphi memoria completa | `ralphi_backups/` → Google Drive | Domingo 3h | NO |
 | AnythingLLM + inneros .env | `/home/rlopez/backups/` | Diario 2h | NO |
-| **Disaster recovery (nuevo)** | `backups/disaster_recovery/` → Drive | **Manual / cron pendiente** | **SÍ** |
+| **Disaster recovery** | `backups/disaster_recovery/` → **Ralphi-IA-Gdrive** | **Diario 1:30 AM (cron)** | **SÍ** |
 
 ## Git — estado real
 
