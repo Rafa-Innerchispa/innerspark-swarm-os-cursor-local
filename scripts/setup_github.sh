@@ -17,9 +17,13 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
 fi
 
 if [[ -z "$GITHUB_USER" ]]; then
+  GITHUB_USER=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/user | python3 -c "import sys,json; print(json.load(sys.stdin).get('login',''))" 2>/dev/null || true)
+fi
+if [[ -z "$GITHUB_USER" ]]; then
   echo "ERROR: Define GITHUB_USER (tu usuario GitHub)"
   exit 1
 fi
+echo "Usuario GitHub: $GITHUB_USER"
 
 # Verificar que .env no está en staging
 if git diff --cached --name-only | grep -qE '^\.env$'; then
