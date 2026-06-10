@@ -1,4 +1,8 @@
-"""Acceso a MongoDB — fuente de verdad operativa PC Doctor."""
+"""Acceso a MongoDB — fuente de verdad operativa PC Doctor.
+
+Esquema canónico v2: docs/ESQUEMA_MONGODB_DBxx.md
+Legacy v1 (inspections, quote_headers): sigue soportado; migrar con scripts/migrate_v1_to_v2.py
+"""
 
 from datetime import datetime, timezone
 from typing import Any
@@ -6,6 +10,8 @@ from typing import Any
 from pymongo import MongoClient
 
 from config import MONGO_DB, MONGO_URI
+from tools.schema import ensure_all_indexes as _ensure_all_indexes
+from tools.schema import new_id
 
 _client: MongoClient | None = None
 
@@ -22,10 +28,7 @@ def _now() -> datetime:
 
 
 def ensure_indexes():
-    db = get_db()
-    db.clients.create_index("ruc", unique=True, sparse=True)
-    db.inspections.create_index("inspection_id", unique=True)
-    db.inventory.create_index("sku", unique=True, sparse=True)
+    _ensure_all_indexes(get_db())
 
 
 def lookup_client_by_ruc(ruc: str) -> dict | None:
@@ -33,8 +36,13 @@ def lookup_client_by_ruc(ruc: str) -> dict | None:
 
 
 def create_client(data: dict) -> dict:
+    from tools.schema import ensure_client_hub
+
     db = get_db()
+    existing = db.clients.find_one({"ruc": data["ruc"]}, {"_id": 0})
+    client_id = (existing or {}).get("client_id") or new_id("cli")
     doc = {
+        "client_id": client_id,
         "ruc": data["ruc"],
         "cedula": data.get("cedula"),
         "name": data.get("name", ""),
@@ -45,11 +53,17 @@ def create_client(data: dict) -> dict:
         "phone": data.get("phone", ""),
         "legal_rep": data.get("legal_rep", ""),
         "activity": data.get("activity", ""),
-        "hub_ready": False,
-        "created_at": _now(),
+        "estado": data.get("estado", "Cliente"),
+        "hub_ready": bool((existing or {}).get("hub_ready")),
+        "hub_id": (existing or {}).get("hub_id"),
+        "created_at": (existing or {}).get("created_at") or _now(),
         "updated_at": _now(),
     }
     db.clients.update_one({"ruc": doc["ruc"]}, {"$set": doc}, upsert=True)
+    if not doc["hub_id"]:
+        hub = ensure_client_hub(db, client_id, doc["name"])
+        doc["hub_id"] = hub["hub_id"]
+        doc["hub_ready"] = True
     return db.clients.find_one({"ruc": doc["ruc"]}, {"_id": 0})
 
 
@@ -153,10 +167,22 @@ def seed_inventory_if_empty():
 
 
 def log_action(agent: str, action: str, payload: dict[str, Any] | None = None):
-    get_db().audit_log.insert_one(
+    entry = {
+        "agent": agent,
+        "action": action,
+        "payload": payload or {},
+        "at": _now(),
+    }
+    db = get_db()
+    db.audit_log.insert_one(entry)
+    db.ai_provenance.insert_one(
         {
-            "agent": agent,
-            "action": action,
+            "actor": f"agente:{agent}",
+            "modelo": None,
+            "fuente": "swarm-os",
+            "accion": action,
+            "target_type": (payload or {}).get("target_type"),
+            "target_id": (payload or {}).get("target_id") or (payload or {}).get("inspection_id"),
             "payload": payload or {},
             "at": _now(),
         }

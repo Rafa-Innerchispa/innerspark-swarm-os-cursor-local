@@ -18,3 +18,9 @@ gcp-key.json
 *secret*
 *.p12
 service-account*.json
+
+# Admin Refine (React)
+admin/node_modules/
+admin/dist/
+admin/.env
+admin/.env.local

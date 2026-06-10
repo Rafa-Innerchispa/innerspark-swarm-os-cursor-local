@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RALF IA v2.0 — Panel de acceso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --surface: #121820;
+      --surface2: #1a2330;
+      --border: #2a3545;
+      --text: #e8edf4;
+      --muted: #8b9bb0;
+      --pc-blue: #1e3a8a;
+      --pc-red: #dc2626;
+      --ic-purple: #7c3aed;
+      --ic-gold: #f59e0b;
+      --accent: #3b9eff;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    body.theme-pc {
+      background-image: radial-gradient(ellipse 70% 45% at 50% -10%, rgba(30, 58, 138, 0.35), transparent),
+        radial-gradient(ellipse 50% 30% at 90% 90%, rgba(220, 38, 38, 0.12), transparent);
+    }
+    body.theme-ic {
+      background-image: radial-gradient(ellipse 70% 45% at 50% -10%, rgba(124, 58, 237, 0.28), transparent),
+        radial-gradient(ellipse 50% 30% at 10% 90%, rgba(245, 158, 11, 0.1), transparent);
+    }
+    body.theme-all {
+      background-image: radial-gradient(ellipse 70% 45% at 30% -10%, rgba(30, 58, 138, 0.22), transparent),
+        radial-gradient(ellipse 50% 35% at 70% -5%, rgba(124, 58, 237, 0.2), transparent);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    header { text-align: center; margin-bottom: 1.75rem; }
+    .logos { display: flex; justify-content: center; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .logos img { height: 52px; max-width: 180px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+    h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { color: var(--muted); max-width: 620px; margin: 0.5rem auto 1rem; line-height: 1.5; }
+    .host-pill {
+      display: inline-flex; gap: 0.5rem; font-family: "JetBrains Mono", monospace; font-size: 0.82rem;
+      background: var(--surface2); border: 1px solid var(--border); padding: 0.4rem 0.85rem; border-radius: 999px;
+    }
+    .tabs { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.25rem 0 1.75rem; }
+    .tab {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-size: 0.88rem; font-weight: 500;
+    }
+    .tab.active { border-color: var(--accent); background: rgba(59,158,255,.12); }
+    .tab.pc.active { border-color: var(--pc-red); background: rgba(30,58,138,.25); }
+    .tab.ic.active { border-color: var(--ic-purple); background: rgba(124,58,237,.18); }
+    .featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 0.9rem; margin-bottom: 1.5rem; }
+    .featured-card, .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.1rem; text-decoration: none; color: inherit; transition: border-color .15s, transform .15s;
+    }
+    .featured-card { background: linear-gradient(135deg, rgba(59,158,255,.1), rgba(34,197,94,.06)); }
+    .featured-card:hover, .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .featured-card h2, .card h3 { font-size: 1rem; margin-bottom: 0.3rem; }
+    .featured-card p, .card p { color: var(--muted); font-size: 0.84rem; line-height: 1.4; }
+    .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
+    .port { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--accent); }
+    .status { font-size: 0.65rem; font-weight: 600; padding: 0.12rem 0.4rem; border-radius: 999px; text-transform: uppercase; }
+    .status.up { background: rgba(34,197,94,.15); color: #22c55e; }
+    .status.unk { background: rgba(139,155,176,.12); color: var(--muted); }
+    .section-title {
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin: 1.5rem 0 0.7rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
+    .voice-banner {
+      background: linear-gradient(90deg, rgba(124,58,237,.2), rgba(59,158,255,.15));
+      border: 1px solid rgba(124,58,237,.35); border-radius: var(--radius); padding: 1rem 1.2rem;
+      margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;
+    }
+    .voice-banner a {
+      color: #fff; background: var(--ic-purple); padding: 0.45rem 0.9rem; border-radius: 8px;
+      text-decoration: none; font-size: 0.85rem; font-weight: 600;
+    }
+    footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="theme-all">
+  <div class="wrap">
+    <header>
+      <div class="logos">
+        <img src="assets/logo_pcdoctor.png" alt="PC Doctor" />
+        <img src="assets/logo_innerchispa.png" alt="InnerChispa LLC" />
+      </div>
+      <h1>RALF IA v2.0</h1>
+      <p class="subtitle">Panel único del servidor. Multiempresa: PC Doctor (operación) e InnerChispa (IA, RAG, agentes). Un bookmark — todos los servicios.</p>
+      <div class="host-pill"><span>Servidor</span> <strong id="host-label">192.168.1.4</strong></div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-filter="all">Todo</button>
+      <button class="tab pc" data-filter="pcdoctor">PC Doctor</button>
+      <button class="tab ic" data-filter="innerchispa">InnerChispa / IA</button>
+    </div>
+
+    <div class="voice-banner" data-company="innerchispa">
+      <div>
+        <strong>🎙️ Voz a texto activo</strong>
+        <p style="color:var(--muted);font-size:.84rem;margin-top:.2rem">Whisper corre local en :9001 (modelo ligero). La API ya transcribe audio en inspecciones de campo.</p>
+      </div>
+      <a href="#" id="whisper-link" target="_blank" rel="noopener">Abrir Whisper</a>
+    </div>
+
+    <div class="featured" id="featured"></div>
+    <div id="sections"></div>
+
+    <footer>
+      <p>Guarda <strong>http://<span id="host-foot">192.168.1.4</span>:8800</strong> como favorito.</p>
+      <p>Configuración de logos y empresas → <a href="#" id="admin-link" style="color:var(--accent)">PC Doctor Admin → Configuración</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const HOST = window.location.hostname || "192.168.1.4";
+    document.getElementById("host-label").textContent = HOST;
+    document.getElementById("host-foot").textContent = HOST;
+    document.getElementById("whisper-link").href = `http://${HOST}:9001/docs`;
+    document.getElementById("admin-link").href = `http://${HOST}:5173/settings`;
+
+    let allItems = [];
+    let filter = "all";
+
+    function url(s) { return `http://${HOST}:${s.port}${s.path || ""}`; }
+
+    function companyMatch(item) {
+      if (filter === "all") return true;
+      if (item.company === "both") return true;
+      return item.company === filter;
+    }
+
+    function cardHtml(s, featured) {
+      const tag = featured ? "h2" : "h3";
+      const cls = featured ? "featured-card" : "card";
+      if (s.web === false) return "";
+      return `<a class="${cls}" data-company="${s.company}" href="${url(s)}" target="_blank" rel="noopener">
+        <${tag}>${s.icon || ""} ${s.name}</${tag}>
+        <p>${s.desc}</p>
+        <div class="meta"><span class="port">:${s.port}</span><span class="status unk" data-port="${s.port}">···</span></div>
+      </a>`;
+    }
+
+    function render() {
+      const feat = document.getElementById("featured");
+      const sec = document.getElementById("sections");
+      feat.innerHTML = "";
+      sec.innerHTML = "";
+      const featured = allItems.filter((s) => s.featured && companyMatch(s));
+      featured.forEach((s) => feat.insertAdjacentHTML("beforeend", cardHtml(s, true)));
+
+      const rest = allItems.filter((s) => !s.featured && companyMatch(s) && s.web !== false);
+      const bySec = {};
+      rest.forEach((s) => (bySec[s.section] ||= []).push(s));
+      for (const [title, items] of Object.entries(bySec)) {
+        const d = document.createElement("div");
+        d.innerHTML = `<div class="section-title">${title}</div><div class="grid">${items.map((s) => cardHtml(s, false)).join("")}</div>`;
+        sec.appendChild(d);
+      }
+      document.querySelector(".voice-banner").classList.toggle("hidden", filter === "pcdoctor");
+      checkPorts();
+    }
+
+    document.querySelectorAll(".tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        filter = btn.dataset.filter;
+        document.body.className = filter === "pcdoctor" ? "theme-pc" : filter === "innerchispa" ? "theme-ic" : "theme-all";
+        render();
+      });
+    });
+
+    async function checkPorts() {
+      const ports = [...new Set(allItems.filter((s) => s.web !== false).map((s) => s.port))];
+      for (const port of ports) {
+        const els = document.querySelectorAll(`[data-port="${port}"]`);
+        let st = "unk";
+        try {
+          const c = new AbortController();
+          const t = setTimeout(() => c.abort(), 2000);
+          await fetch(`http://${HOST}:${port}/`, { mode: "no-cors", signal: c.signal });
+          clearTimeout(t);
+          st = "up";
+        } catch {}
+        els.forEach((el) => { el.className = `status ${st}`; el.textContent = st === "up" ? "activo" : "verificar"; });
+      }
+    }
+
+    fetch("services.json")
+      .then((r) => r.json())
+      .then((cfg) => {
+        allItems = [
+          ...cfg.featured.map((s) => ({ ...s, featured: true })),
+          ...cfg.services.map((s) => ({ ...s, featured: false })),
+        ];
+        render();
+      })
+      .catch(() => {
+        allItems = [{ featured: true, company: "both", name: "Error cargando servicios", desc: "Recarga la página", port: 8800, icon: "⚠️" }];
+        render();
+      });
+  </script>
+</body>
+</html>

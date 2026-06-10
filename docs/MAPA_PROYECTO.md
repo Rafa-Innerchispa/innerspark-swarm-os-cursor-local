@@ -1,7 +1,8 @@
 # MAPA MAESTRO — InnerSpark Swarm-OS Cursor Local
 
-**Última actualización:** 2026-06-09  
-**Servidor:** `ralphi-ia-ver-10` / `192.168.1.4`  
+**Última actualización:** 2026-06-09 (esquema v2 + docs onboarding modelo IA)  
+**Servidor:** `ralphi-ia-ver-10` / **`192.168.1.4`** (MongoDB y API viven aquí, no en tu Windows)  
+**Acceso red:** `docs/ACCESO_RED.md`  
 **Proyecto activo:** desarrollo local con Cursor (NO mezclar con Google AI Studio hackathon)
 
 ---
@@ -35,8 +36,19 @@ Técnico en urbanización → dictado/fotos/audio
 
 ```
 /home/rlopez/projects/innerspark-swarm-os-cursor-local/
+├── AGENTS.md                     ← LEER PRIMERO (cualquier modelo IA)
 ├── docs/
-│   └── MAPA_PROYECTO.md          ← ESTE ARCHIVO (constitución del mapa)
+│   ├── INSTRUCCIONES_AGENTE.md   ← Onboarding sin chat anterior
+│   ├── ESQUEMA_MONGODB_DBxx.md  ← DB01–DB52 → colecciones Mongo
+│   ├── CANON_CORRECCIONES_DBxx.md
+│   ├── SOPS_LOGICA_OPERATIVA.md   ← SOPs Master (Playbook)
+│   ├── RELACIONES_Y_FLUJOS.md   ← Relaciones + gates para código
+│   ├── ACCESO_RED.md            ← 192.168.1.4 vs 127.0.0.1
+│   ├── MAPA_PROYECTO.md          ← ESTE ARCHIVO
+│   ├── RECUPERACION_DESASTRE.md
+│   └── GITHUB_SEGURO.md
+├── scripts/
+│   └── migrate_v1_to_v2.py       ← Legacy inspections → v2
 ├── api/main.py                   ← FastAPI puerto 8100
 ├── agents/
 │   ├── crew.py                   ← orquestación CrewAI
@@ -45,7 +57,8 @@ Técnico en urbanización → dictado/fotos/audio
 │   ├── ruc_api.py                ← SRI vía Intuito (cédula/RUC)
 │   ├── transcribe.py             ← Whisper :9001
 │   ├── file_reader.py            ← PDF + fotos (llava)
-│   ├── mongo.py                  ← base de datos
+│   ├── mongo.py                  ← base de datos (legacy + v2)
+│   ├── schema.py                 ← índices, secuenciales DB40
 │   ├── crew_tools.py             ← tools para agentes
 │   └── pdf_generator.py          ← exportables .md (→ PDF después)
 ├── .env                          ← credenciales (RUC, Ollama, etc.)
@@ -111,16 +124,23 @@ Técnico en urbanización → dictado/fotos/audio
 
 ### Fase A — Flujo de campo usable (siguiente)
 
-1. **Probar flujo end-to-end** con caso real (ASOPAR o DOMOTIKA)
-2. **Mejorar agentes** para que usen datos RUC reales al crear cliente
-3. **Gates Playbook** en revisor (campos obligatorios informe/cotización)
-4. **PDF real** (HTML → PDF con plantilla PC Doctor, no solo .md)
+- [x] Esquema MongoDB v2 documentado (`docs/ESQUEMA_MONGODB_DBxx.md`)
+- [x] Correcciones canónicas DB41/DB12 (`docs/CANON_CORRECCIONES_DBxx.md`)
+- [x] `tools/schema.py` — índices + `next_serial()` DB40
+- [x] `scripts/migrate_v1_to_v2.py` — migración idempotente
+- [x] Onboarding modelo IA (`AGENTS.md`, `docs/INSTRUCCIONES_AGENTE.md`)
+- [x] Estructura MongoDB creada (`python scripts/init_mongodb_schema.py`) — 62 colecciones
+- [ ] Migración opcional solo si hay datos legacy en `inspections`
+- [x] Conectar `crew.py` a flujo v2 (`workflow_v2.py`: DB42→45→27/38→documents→gates)
+- [ ] Probar flujo end-to-end ASOPAR o DOMOTIKA
+- [ ] Gates DB41 en agente Revisor
+- [ ] PDF real (HTML → PDF, no solo .md)
 
 ### Fase B — Operación diaria
 
-5. **Inventario real** en MongoDB (importar DB26 / CSV)
-6. **Hub cliente** en MongoDB (equivalente Notion Hub)
-7. **Secuenciales** PCD-INF-26-XXXX / PCD-COT-26-XXXX (DB40)
+5. **Inventario real** en MongoDB (importar DB26 / CSV → `inventory_items`)
+6. ~~Hub cliente~~ — `client_hubs` en v2 (al crear cliente)
+7. ~~Secuenciales~~ — `next_serial()` en schema.py
 8. **n8n webhook** correo + WhatsApp (Evolution API :8082 ya existe)
 
 ### Fase C — Pulido
@@ -163,7 +183,14 @@ POST /inspection/{id}/upload-audio  multipart audio → Whisper
 POST /inspection/{id}/analyze-file {"path": "...", "question": "..."}
 POST /inspection/start              {"input": "...", "inspection_id": "..."}
 POST /inspection/{id}/notify        correo/WhatsApp vía n8n
+GET  /schema/registry               mapa DBxx → colecciones
+GET  /schema/flows                  flujos SOP + gates
+POST /gates/client/duplicate-check  anti-duplicación DB04
+POST /gates/quote/{id}/ready-to-send   gate Listo para enviar
+POST /gates/quote/{id}/validate-rules  reglas DB41
 ```
+
+**Desde Windows:** reemplazar host por `http://192.168.1.4:8100`
 
 ---
 
@@ -210,13 +237,14 @@ Ejecutar respaldo: `/home/rlopez/projects/backup_disaster_recovery.sh`
 
 ---
 
-## 11. Cómo no perder contexto
+## 11. Cómo no perder contexto (cambio de modelo IA)
 
-1. **Este archivo:** `docs/MAPA_PROYECTO.md` — actualizar cada sesión importante
-2. **README.md** — comandos rápidos
-3. **Notion Playbook V2** — reglas de negocio (pegar a `docs/playbook-v2.md`)
-4. **MongoDB** — datos operativos persisten
-5. **Chats Cursor** — pensar aquí; decisiones van al MAPA
+1. **`AGENTS.md`** + **`docs/INSTRUCCIONES_AGENTE.md`** — prompt de arranque para modelo nuevo
+2. **Este archivo** — visión y fases
+3. **`docs/ESQUEMA_MONGODB_DBxx.md`** — datos y relaciones
+4. **MongoDB** — persiste aunque cambies de modelo
+5. **`.env`** — credenciales en disco (no en git)
+6. **Chats Cursor** — efímeros; decisiones van a los docs anteriores
 
 ---
 

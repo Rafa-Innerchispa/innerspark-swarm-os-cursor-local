@@ -10,16 +10,25 @@ from langchain_ollama import ChatOllama
 
 from agents.roles import build_agents, get_llm
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
-from tools.crew_tools import get_inspection_context, start_inspection_record
+from tools.crew_tools import get_inspection_context
 from tools.mongo import (
+    create_client,
     ensure_indexes,
     lookup_client_by_ruc,
-    save_quote,
     save_report,
     seed_inventory_if_empty,
 )
 from tools.pdf_generator import export_quote, export_technical_report
 from tools.ruc_api import lookup_ruc
+from tools.workflow_v2 import (
+    finalize_field_flow,
+    get_flow_context,
+    register_document,
+    save_quote_v2,
+    save_technical_report_v2,
+    start_field_visit,
+    sync_findings_to_visit,
+)
 
 
 def _extract_ruc(text: str) -> str | None:
@@ -78,10 +87,9 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
     ensure_indexes()
     seed_inventory_if_empty()
 
-    if not inspection_id:
-        inspection_id = start_inspection_record(raw_input)
-
     ruc = _extract_ruc(raw_input)
+    visit_info = start_field_visit(raw_input, inspection_id=inspection_id, ruc=ruc)
+    inspection_id = visit_info["inspection_id"]
     sri_data = lookup_ruc(ruc) if ruc else {}
     client = lookup_client_by_ruc(ruc) if ruc else None
 
@@ -103,6 +111,25 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
         crew_cliente = Crew(agents=[cliente_agent], tasks=[t_cliente], process=Process.sequential, verbose=True)
         client_result = crew_cliente.kickoff()
         client_summary = _parse_json_block(str(client_result), sri_data)
+        if ruc and client_summary.get("ruc"):
+            create_client(
+                {
+                    "ruc": client_summary.get("ruc", ruc),
+                    "name": client_summary.get("name", sri_data.get("name", "")),
+                    "address": client_summary.get("address", ""),
+                    "city": client_summary.get("city", ""),
+                }
+            )
+
+    client_doc = lookup_client_by_ruc(ruc) if ruc else None
+    client_id = (client_doc or {}).get("client_id")
+    if client_id:
+        from tools.mongo import get_db
+
+        get_db().sop_visits.update_one(
+            {"legacy_inspection_id": inspection_id},
+            {"$set": {"client_id": client_id, "ruc": ruc}},
+        )
 
     # --- Fase 2: Campo + hallazgos ---
     campo_agent = _agent_from_spec(specs["campo"])
@@ -119,6 +146,7 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
     )
     crew_campo = Crew(agents=[campo_agent], tasks=[t_campo], process=Process.sequential, verbose=True)
     crew_campo.kickoff()
+    sync_findings_to_visit(inspection_id)
 
     ctx = get_inspection_context(inspection_id)
     findings = ctx.get("findings", [])
@@ -152,6 +180,7 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
         },
     )
     save_report(inspection_id, report)
+    report_v2 = save_technical_report_v2(inspection_id, report, client_id=client_id)
 
     # --- Fase 4: Cotización ---
     cotizador_agent = _agent_from_spec(specs["cotizador"])
@@ -169,7 +198,7 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
     quote = _parse_json_block(str(cot_result), _fallback_quote(findings))
     if ruc:
         quote["client_ruc"] = ruc
-    save_quote(inspection_id, quote)
+    quote_v2 = save_quote_v2(inspection_id, quote, client_id=client_id)
 
     # --- Fase 5: Revisión ---
     revisor_agent = _agent_from_spec(specs["revisor"])
@@ -201,17 +230,39 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
     comm_result = crew_comm.kickoff()
 
     client_doc = lookup_client_by_ruc(ruc) if ruc else client_summary
-    report_path = export_technical_report(inspection_id, report, client_doc or {})
-    quote_path = export_quote(inspection_id, quote, client_doc or {})
+    report_path = export_technical_report(
+        inspection_id, report, client_doc or {}, code=report_v2.get("code")
+    )
+    quote_path = export_quote(
+        inspection_id, quote_v2, client_doc or {}, code=quote_v2.get("code")
+    )
+
+    doc_report = register_document(
+        report_path, "technical_report", report_v2["report_id"], client_id=client_id
+    )
+    doc_quote = register_document(quote_path, "quote", quote_v2["quote_id"], client_id=client_id)
+
+    final = finalize_field_flow(inspection_id, client_id=client_id)
+    v2_ctx = get_flow_context(inspection_id)
 
     return {
         "inspection_id": inspection_id,
+        "flow": "campo_pc_doctor_v2",
+        "visit": v2_ctx.get("visit"),
         "client": client_doc,
         "findings": findings,
         "report": report,
-        "quote": quote,
+        "report_v2": report_v2,
+        "quote": quote_v2,
         "review": review,
         "communications_draft": str(comm_result),
         "exports": {"report_md": report_path, "quote_md": quote_path},
+        "documents": [doc_report, doc_quote],
+        "gates": final.get("gates"),
+        "codes": {
+            "visit": visit_info.get("code"),
+            "report": report_v2.get("code"),
+            "quote": quote_v2.get("code"),
+        },
         "status": "completed",
     }

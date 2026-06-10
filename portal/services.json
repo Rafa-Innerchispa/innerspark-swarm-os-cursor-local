@@ -1,0 +1,179 @@
+{
+  "featured": [
+    {
+      "id": "admin",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "PC Doctor Admin",
+      "desc": "Mini-ERP: clientes, inventario, cotizaciones, visitas. Trabajo operativo del negocio.",
+      "port": 5173,
+      "path": "",
+      "icon": "📋"
+    },
+    {
+      "id": "files",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Gestor de archivos",
+      "desc": "Arrastra carpetas desde Windows, sube archivos y edita textos sin SSH.",
+      "port": 8081,
+      "path": "",
+      "icon": "📁"
+    },
+    {
+      "id": "api",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Swarm-OS API",
+      "desc": "Cerebro operativo: inspecciones, gates, documentos, voz→texto.",
+      "port": 8100,
+      "path": "/docs",
+      "icon": "⚡"
+    },
+    {
+      "id": "whisper",
+      "section": "Voz y chat",
+      "company": "innerchispa",
+      "name": "Whisper — voz a texto",
+      "desc": "Habla y el sistema transcribe (español). Ligero, corre local en el servidor.",
+      "port": 9001,
+      "path": "/docs",
+      "icon": "🎙️"
+    }
+  ],
+  "services": [
+    {
+      "id": "openwebui",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Open WebUI",
+      "desc": "Chat con modelos locales Ollama.",
+      "port": 3000,
+      "path": "",
+      "icon": "💬"
+    },
+    {
+      "id": "anythingllm",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "AnythingLLM",
+      "desc": "RAG: preguntar sobre PDFs, manuales y documentos indexados.",
+      "port": 3001,
+      "path": "",
+      "icon": "📚"
+    },
+    {
+      "id": "ollama",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Ollama API",
+      "desc": "Motor de modelos locales (API REST).",
+      "port": 11434,
+      "path": "",
+      "icon": "🧠",
+      "note": "API, no interfaz visual"
+    },
+    {
+      "id": "litellm",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "LiteLLM Gateway",
+      "desc": "Puente unificado de modelos (local + APIs externas).",
+      "port": 4000,
+      "path": "",
+      "icon": "🔀"
+    },
+    {
+      "id": "qdrant",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Qdrant",
+      "desc": "Base de vectores para búsqueda semántica.",
+      "port": 6333,
+      "path": "/dashboard",
+      "icon": "🔍"
+    },
+    {
+      "id": "n8n",
+      "section": "Automatización",
+      "company": "innerchispa",
+      "name": "n8n",
+      "desc": "Flujos y automatizaciones visuales.",
+      "port": 5678,
+      "path": "",
+      "icon": "🔗"
+    },
+    {
+      "id": "evolution",
+      "section": "Automatización",
+      "company": "both",
+      "name": "Evolution API",
+      "desc": "WhatsApp y mensajería.",
+      "port": 8082,
+      "path": "",
+      "icon": "📱"
+    },
+    {
+      "id": "portainer",
+      "section": "Infraestructura",
+      "company": "both",
+      "name": "Portainer",
+      "desc": "Administrar contenedores Docker.",
+      "port": 9000,
+      "path": "",
+      "icon": "🐳"
+    },
+    {
+      "id": "cockpit",
+      "section": "Infraestructura",
+      "company": "both",
+      "name": "Cockpit",
+      "desc": "Administración del servidor Linux (el que recuerdas en :9090).",
+      "port": 9090,
+      "path": "",
+      "icon": "🖥️"
+    },
+    {
+      "id": "homeassistant",
+      "section": "Infraestructura",
+      "company": "both",
+      "name": "Home Assistant",
+      "desc": "Domótica y automatización hogar/oficina.",
+      "port": 8123,
+      "path": "",
+      "icon": "🏠"
+    },
+    {
+      "id": "ralphi-gateway",
+      "section": "Infraestructura",
+      "company": "innerchispa",
+      "name": "Ralphi Gateway",
+      "desc": "API gateway legacy (ai-server-v2).",
+      "port": 8091,
+      "path": "/docs",
+      "icon": "🌐"
+    },
+    {
+      "id": "mongodb",
+      "section": "Bases de datos",
+      "company": "both",
+      "name": "MongoDB",
+      "desc": "Base operativa pcdoctor_swarm (solo conexión, no UI web).",
+      "port": 27017,
+      "path": "",
+      "icon": "🍃",
+      "web": false
+    },
+    {
+      "id": "postgres",
+      "section": "Bases de datos",
+      "company": "both",
+      "name": "PostgreSQL",
+      "desc": "Base relacional (Evolution, Ralphi). Sin UI web directa.",
+      "port": 5432,
+      "path": "",
+      "icon": "🐘",
+      "web": false
+    }
+  ]
+}

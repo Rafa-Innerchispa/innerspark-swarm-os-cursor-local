@@ -11,10 +11,16 @@ def _ts() -> str:
     return datetime.now(ZoneInfo("America/Guayaquil")).strftime("%Y-%m-%d")
 
 
-def export_technical_report(inspection_id: str, report: dict, client: dict) -> str:
+def export_technical_report(
+    inspection_id: str,
+    report: dict,
+    client: dict,
+    code: str | None = None,
+) -> str:
     client_name = client.get("name", "Cliente")
     short = client_name[:20].replace(" ", "")
-    path = EXPORTS_DIR / f"PDF-PCD-INF-26-{inspection_id[:6]}-{short}.md"
+    label = (code or f"PCD-RPT-26-{inspection_id[:6]}").replace("/", "-")
+    path = EXPORTS_DIR / f"{label}-{short}.md"
     body = f"""# Informe Técnico — PC Doctor S.A.
 
 **Cliente:** {client_name}
@@ -42,10 +48,16 @@ def export_technical_report(inspection_id: str, report: dict, client: dict) -> s
     return str(path)
 
 
-def export_quote(inspection_id: str, quote: dict, client: dict) -> str:
+def export_quote(
+    inspection_id: str,
+    quote: dict,
+    client: dict,
+    code: str | None = None,
+) -> str:
     client_name = client.get("name", "Cliente")
     short = client_name[:20].replace(" ", "")
-    path = EXPORTS_DIR / f"PDF-PCD-COT-26-{inspection_id[:6]}-{short}.md"
+    label = (code or f"PCD-COT-26-{inspection_id[:6]}").replace("/", "-")
+    path = EXPORTS_DIR / f"{label}-{short}.md"
     lines_txt = "\n".join(
         f"- {l.get('qty', 1)} x {l.get('name', '')} @ ${l.get('unit_price', 0):.2f}"
         for l in quote.get("lines", [])

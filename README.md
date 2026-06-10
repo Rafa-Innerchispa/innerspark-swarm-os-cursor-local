@@ -3,8 +3,10 @@
 Sistema multi-agente **PC Doctor S.A.** para inspecciones de campo, clientes (RUC/SRI),
 informes técnicos y cotizaciones. Base de datos: **MongoDB local**.
 
-> **Mapa completo del proyecto (no perder contexto):**  
-> [`docs/MAPA_PROYECTO.md`](docs/MAPA_PROYECTO.md)
+> **¿Cambias de modelo IA o se acaban los créditos?** Lee primero:  
+> [`AGENTS.md`](AGENTS.md) → [`docs/INSTRUCCIONES_AGENTE.md`](docs/INSTRUCCIONES_AGENTE.md)  
+> **Mapa del proyecto:** [`docs/MAPA_PROYECTO.md`](docs/MAPA_PROYECTO.md)  
+> **Esquema MongoDB DBxx:** [`docs/ESQUEMA_MONGODB_DBxx.md`](docs/ESQUEMA_MONGODB_DBxx.md)
 
 ## Ubicación en servidor
 
@@ -94,6 +96,25 @@ curl -X POST http://192.168.1.4:8100/inspection/start \
 ```
 
 Whisper debe estar corriendo: `cd /home/rlopez/whisper-service && docker compose up -d`
+
+## Esquema de datos v2 (MongoDB)
+
+**Crear toda la estructura en MongoDB** (colecciones DB01–DB52 + índices):
+
+```bash
+python scripts/init_mongodb_schema.py
+```
+
+Ver estado **desde tu Windows**: `curl http://192.168.1.4:8100/status`  
+(En el servidor el `.env` usa `127.0.0.1` porque Mongo/Ollama están en la misma máquina — ver `docs/ACCESO_RED.md`)
+
+**Migración opcional** (solo si tienes datos viejos en `inspections`):
+
+```bash
+python scripts/migrate_v1_to_v2.py
+```
+
+Correcciones canónicas vs Notion: `docs/CANON_CORRECCIONES_DBxx.md`
 
 ## ¿Copiar Google AI Studio?
 
