@@ -52,3 +52,32 @@ curl http://192.168.1.4:8100/status
 **Fase A:** flujo campo end-to-end con esquema v2 (DB04→DB45→DB27/38→DB40→DB41→DB52).
 
 Ver checklist en `docs/MAPA_PROYECTO.md` sección 5.
+
+## Cursor Cloud specific instructions
+
+Esta sección es para agentes en el VM de Cursor Cloud (NO el servidor `192.168.1.4`).
+El update script ya dejó listo: `venv` con `requirements.txt` y `admin/node_modules`.
+MongoDB 8.0 (apt) ya está instalado a nivel de sistema; los datos viven en `/var/lib/mongodb`.
+
+**Servicios (todo en localhost, no 192.168.1.4):**
+
+| Servicio | Puerto | Arranque | Notas |
+|----------|--------|----------|-------|
+| MongoDB | 27017 | `mongod --dbpath /var/lib/mongodb --bind_ip 127.0.0.1 --port 27017` | No hay systemd en el contenedor; arráncalo a mano (p.ej. en tmux) antes que la API |
+| API FastAPI | 8100 | `venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8100` | Requiere MongoDB arriba. `run_api.sh` no sirve aquí (espera `source venv/bin/activate` + puerto) |
+| Admin Refine | 5173 | `npm run dev --prefix admin` | Lee `admin/.env` → `VITE_API_URL=http://localhost:8100/api/v1` |
+| Portal estático | 8800 | `python3 -m http.server 8800 --directory portal` | Solo HTML estático |
+
+**Setup no cubierto por el update script (hazlo en cada sesión nueva):**
+- Arrancar `mongod` (ver tabla) — los datos persisten en `/var/lib/mongodb`.
+- Init esquema una vez (idempotente): `venv/bin/python scripts/init_mongodb_schema.py`.
+- `.env` (raíz) y `admin/.env` están gitignored y apuntan a `localhost`; si faltan, recréalos desde `.env.example` cambiando los hosts a `localhost`/`127.0.0.1`.
+
+**Verificación rápida:** `curl http://localhost:8100/status` (no `192.168.1.4`).
+
+**Caveats no obvios (comportamiento del código existente, no "bugs" del entorno):**
+- **Ollama no está instalado.** `POST /inspection/start` (flujo CrewAI completo, agentes) falla sin Ollama en `:11434` con `neural-chat:7b` (+ `llava:7b` para visión). El resto de la API funciona sin Ollama: `/status`, CRUD `/api/v1/*`, `/ruc/lookup`, gates.
+- **RUC lookup** cae a mock local (`tools/sri_mock.py`) si `RUC_API_USER/PASS` están vacíos — útil para pruebas sin credenciales.
+- **Páginas admin genéricas** (Inventario, Catálogo, Proveedores, Cotizaciones, Visitas) usan `GenericList`, que renderiza la tabla SIN columnas definidas: se ven vacías aunque los datos sí cargan. Verifica datos vía `curl http://localhost:8100/api/v1/<recurso>`.
+- **Configuración (empresas):** editar y "Guardar" hace PATCH y persiste, pero `tools/companies.ensure_companies()` se ejecuta en cada `GET /companies` y reescribe los campos a los valores por defecto; los logos 404 porque la página tiene hardcodeado `http://192.168.1.4:8100`.
+- **No hay suite de tests.** El "build" del admin es `npm run build --prefix admin` (Vite). `npx tsc --noEmit` reporta errores preexistentes de `import.meta.env` (faltan tipos `vite/client`) que NO afectan al dev server ni al build.
