@@ -52,3 +52,28 @@ curl http://192.168.1.4:8100/status
 **Fase A:** flujo campo end-to-end con esquema v2 (DB04→DB45→DB27/38→DB40→DB41→DB52).
 
 Ver checklist en `docs/MAPA_PROYECTO.md` sección 5.
+
+## Cursor Cloud specific instructions
+
+Este entorno NO es el servidor `192.168.1.4`: todo corre en `localhost`. La VM
+trae instaladas las dependencias (venv Python en `./venv`, `admin/node_modules`)
+y el binario de MongoDB; el update script solo refresca dependencias, no arranca
+servicios. Cada sesión debes arrancar los servicios tú.
+
+**Servicios (3) y cómo arrancarlos:**
+
+- **MongoDB** (necesario para todo): no es un `systemd` service aquí. Arráncalo así
+  (datadir/log ya existen): `sudo mongod --dbpath /var/lib/mongodb --bind_ip 127.0.0.1 --port 27017 --logpath /var/log/mongodb/mongod.log` (déjalo en segundo plano, p.ej. tmux). Verifica: `mongosh pcdoctor_swarm --eval 'db.runCommand({ping:1})'`.
+- **API FastAPI** (`:8100`): `./run_api.sh` (usa `./venv`). Endpoints REST en `/api/v1/*`, Swagger en `/docs`. La primera vez corre `python scripts/init_mongodb_schema.py` para crear las ~63 colecciones (idempotente).
+- **admin** (Refine/Vite React, `:5173`): `npm --prefix admin run dev`. Lee la API desde `VITE_API_URL` (`admin/.env`); en esta VM apúntalo a `http://localhost:8100/api/v1` (el `.env.example` usa `192.168.1.4`).
+- **portal** (estático, `:8800`): `./run_portal.sh`.
+
+**Caveats no obvios:**
+
+- `.env` se crea copiando `.env.example`; los defaults `127.0.0.1` ya sirven en esta VM.
+- El flujo multi-agente `POST /inspection/start` (CrewAI) requiere **Ollama** + modelo
+  `neural-chat:7b`, que **no** están instalados aquí (descarga pesada). El resto del
+  producto (admin ERP: clientes, inventario, catálogo, cotizaciones, visitas, branding)
+  funciona sin Ollama. Instala Ollama solo si necesitas probar ese flujo IA.
+- No hay tests ni ESLint configurados. El "lint/build" del admin es `npm --prefix admin run build` (Vite). `tsc --noEmit` por separado reporta errores de `import.meta.env` por falta de tipos `vite/client` en `tsconfig` (preexistente); Vite los resuelve, no afecta a `dev`/`build`.
+- Whisper (`:9001`) y n8n son opcionales y externos; sin ellos, subir audio y notificar fallan, pero el resto opera.
