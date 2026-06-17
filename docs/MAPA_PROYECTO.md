@@ -197,8 +197,8 @@ POST /gates/quote/{id}/validate-rules  reglas DB41
 ## 8. Credenciales (.env)
 
 ```
-RUC_API_USER=deuna-ruc          # públicas guía Intuito (desarrollo)
-RUC_API_PASS=BXQbDtMt
+RUC_API_USER=          # ver .env (Intuito) — NUNCA pegar contraseña en docs
+RUC_API_PASS=          # solo en .env local, ignorado por git
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=neural-chat:7b
 WHISPER_URL=http://127.0.0.1:9001

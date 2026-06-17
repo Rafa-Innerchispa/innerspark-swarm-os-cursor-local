@@ -1,4 +1,4 @@
-from langchain_ollama import ChatOllama
+from crewai import LLM
 
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from tools.crew_tools import (
@@ -12,12 +12,8 @@ from tools.crew_tools import (
 )
 
 
-def get_llm() -> ChatOllama:
-    return ChatOllama(
-        model=OLLAMA_MODEL,
-        base_url=OLLAMA_BASE_URL,
-        temperature=0.2,
-    )
+def get_llm() -> LLM:
+    return LLM(model=f"ollama/{OLLAMA_MODEL}", base_url=OLLAMA_BASE_URL, temperature=0.2)
 
 
 def build_agents(llm):

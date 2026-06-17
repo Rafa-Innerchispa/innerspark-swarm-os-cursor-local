@@ -1,6 +1,7 @@
 import type { BaseRecord, DataProvider } from "@refinedev/core";
+import { getApiBase } from "../lib/api";
 
-const API = import.meta.env.VITE_API_URL || "http://192.168.1.4:8100/api/v1";
+const API = getApiBase();
 
 /** Mapeo recurso Refine → endpoint FastAPI */
 const routes: Record<string, string> = {
@@ -10,6 +11,7 @@ const routes: Record<string, string> = {
   suppliers: "suppliers",
   quotes: "quotes",
   "sop-visits": "sop-visits",
+  "technical-reports": "technical-reports",
 };
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {

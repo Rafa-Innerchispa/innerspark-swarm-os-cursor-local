@@ -6,10 +6,8 @@ import uuid
 from typing import Any
 
 from crewai import Agent, Crew, Process, Task
-from langchain_ollama import ChatOllama
 
 from agents.roles import build_agents, get_llm
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from tools.crew_tools import get_inspection_context
 from tools.mongo import (
     create_client,
@@ -17,6 +15,7 @@ from tools.mongo import (
     lookup_client_by_ruc,
     save_report,
     seed_inventory_if_empty,
+    update_inspection,
 )
 from tools.pdf_generator import export_quote, export_technical_report
 from tools.ruc_api import lookup_ruc
@@ -94,7 +93,6 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
     client = lookup_client_by_ruc(ruc) if ruc else None
 
     specs = build_agents(get_llm())
-    llm = ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL, temperature=0.2)
 
     # --- Fase 1: Cliente (si hay RUC) ---
     client_summary = client or sri_data
@@ -111,10 +109,11 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
         crew_cliente = Crew(agents=[cliente_agent], tasks=[t_cliente], process=Process.sequential, verbose=True)
         client_result = crew_cliente.kickoff()
         client_summary = _parse_json_block(str(client_result), sri_data)
-        if ruc and client_summary.get("ruc"):
+        save_ruc = (client_summary.get("ruc") or ruc or "").strip()
+        if len(save_ruc) >= 10:
             create_client(
                 {
-                    "ruc": client_summary.get("ruc", ruc),
+                    "ruc": save_ruc,
                     "name": client_summary.get("name", sri_data.get("name", "")),
                     "address": client_summary.get("address", ""),
                     "city": client_summary.get("city", ""),
@@ -256,6 +255,112 @@ def run_inspection_flow(raw_input: str, inspection_id: str | None = None) -> dic
         "quote": quote_v2,
         "review": review,
         "communications_draft": str(comm_result),
+        "exports": {"report_md": report_path, "quote_md": quote_path},
+        "documents": [doc_report, doc_quote],
+        "gates": final.get("gates"),
+        "codes": {
+            "visit": visit_info.get("code"),
+            "report": report_v2.get("code"),
+            "quote": quote_v2.get("code"),
+        },
+        "status": "completed",
+    }
+
+
+def _demo_findings(raw_input: str) -> list[dict]:
+    """Hallazgos heurísticos para demo sin LLM tool-calling."""
+    items: list[dict] = []
+    lower = raw_input.lower()
+    if "poe" in lower or "switch" in lower:
+        items.append(
+            {
+                "item": "Switch PoE 16 puertos",
+                "severity": "alta",
+                "detail": "Infraestructura de cámaras requiere switch PoE",
+                "qty": 1,
+                "estimated_unit_price": 185.0,
+            }
+        )
+    if "cámara" in lower or "camara" in lower:
+        items.append(
+            {
+                "item": "Revisión circuito cámaras IP",
+                "severity": "media",
+                "detail": "Verificar alimentación y conectividad de cámaras",
+                "qty": 1,
+                "estimated_unit_price": 45.0,
+            }
+        )
+    if not items:
+        items.append(
+            {
+                "item": "Inspección y diagnóstico en campo",
+                "severity": "media",
+                "detail": raw_input[:200],
+                "qty": 1,
+                "estimated_unit_price": 45.0,
+            }
+        )
+    return items
+
+
+def run_inspection_demo(raw_input: str, inspection_id: str | None = None) -> dict[str, Any]:
+    """
+    Flujo determinista para demo hackathon cuando Ollama local no soporta tools CrewAI.
+    Ejecuta tools reales (MongoDB, PDF, cotización) sin orquestación LLM.
+    """
+    ensure_indexes()
+    seed_inventory_if_empty()
+
+    ruc = _extract_ruc(raw_input)
+    visit_info = start_field_visit(raw_input, inspection_id=inspection_id, ruc=ruc)
+    inspection_id = visit_info["inspection_id"]
+    findings = _demo_findings(raw_input)
+    pending = ["Validar cotización con cliente", "Programar instalación switch PoE"]
+    update_inspection(inspection_id, {"findings": findings, "pending_tasks": pending})
+    sync_findings_to_visit(inspection_id)
+
+    client_doc = lookup_client_by_ruc(ruc) if ruc else None
+    client_id = (client_doc or {}).get("client_id")
+
+    report = {
+        "summary": "Inspección técnica — levantamiento de hallazgos en campo",
+        "location": (client_doc or {}).get("address", "Torres de la Merced"),
+        "technician": "Técnico PC Doctor",
+        "findings_text": "; ".join(f.get("detail", "") for f in findings),
+        "work_done": "Diagnóstico visual y levantamiento de infraestructura",
+        "final_status": "Pendiente aprobación cotización",
+        "recommendations": "Instalar switch PoE y reorganizar cableado según cotización",
+    }
+    save_report(inspection_id, report)
+    report_v2 = save_technical_report_v2(inspection_id, report, client_id=client_id)
+
+    quote = _fallback_quote(findings)
+    if ruc:
+        quote["client_ruc"] = ruc
+    quote_v2 = save_quote_v2(inspection_id, quote, client_id=client_id)
+
+    client_doc = client_doc or {"name": "Cliente demo", "ruc": ruc}
+    report_path = export_technical_report(inspection_id, report, client_doc, code=report_v2.get("code"))
+    quote_path = export_quote(inspection_id, quote_v2, client_doc, code=quote_v2.get("code"))
+
+    doc_report = register_document(report_path, "technical_report", report_v2["report_id"], client_id=client_id)
+    doc_quote = register_document(quote_path, "quote", quote_v2["quote_id"], client_id=client_id)
+
+    final = finalize_field_flow(inspection_id, client_id=client_id)
+    v2_ctx = get_flow_context(inspection_id)
+
+    return {
+        "inspection_id": inspection_id,
+        "flow": "demo_deterministic_local",
+        "visit": v2_ctx.get("visit"),
+        "client": client_doc,
+        "findings": findings,
+        "report": report,
+        "report_v2": report_v2,
+        "quote": quote_v2,
+        "review": {"approved": True, "issues": [], "notes": "Demo mode — sin CrewAI tool-calling"},
+        "communications_draft": f"Cotización lista — total USD {quote_v2.get('total', quote.get('total'))}",
         "exports": {"report_md": report_path, "quote_md": quote_path},
         "documents": [doc_report, doc_quote],
         "gates": final.get("gates"),

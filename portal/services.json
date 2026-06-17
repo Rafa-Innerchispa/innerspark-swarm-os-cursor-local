@@ -11,6 +11,16 @@
       "icon": "📋"
     },
     {
+      "id": "datacenter",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Centro de Datos (chat + voz)",
+      "desc": "Crear y consultar por conversación. Probar micrófono Whisper aquí.",
+      "port": 5173,
+      "path": "/datacenter",
+      "icon": "💬"
+    },
+    {
       "id": "files",
       "section": "Trabajo diario",
       "company": "both",

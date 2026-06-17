@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import { Refine, ResourceProps } from "@refinedev/core";
-import { ThemedLayoutV2, RefineThemes, useNotificationProvider } from "@refinedev/antd";
-import { ConfigProvider, App as AntApp } from "antd";
+import { RefineThemes, useNotificationProvider } from "@refinedev/antd";
+import { ConfigProvider, App as AntApp, theme } from "antd";
 import routerBindings, { UnsavedChangesNotifier } from "@refinedev/react-router-v6";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import {
   TeamOutlined,
   ShoppingOutlined,
@@ -10,64 +11,98 @@ import {
   ShopOutlined,
   FileTextOutlined,
   CarOutlined,
-  DashboardOutlined,
   SettingOutlined,
+  CommentOutlined,
+  FileSearchOutlined,
+  MailOutlined,
+  DeploymentUnitOutlined,
 } from "@ant-design/icons";
+import { HackathonPage } from "./pages/hackathon";
+import { AppLayout } from "./components/AppLayout";
+import { LangProvider, useLang } from "./i18n/LangContext";
 import { dataProvider } from "./providers/dataProvider";
 import { ClientList } from "./pages/clients/list";
 import { Dashboard } from "./pages/dashboard";
-import { GenericList } from "./pages/generic/List";
+import { ResourceList } from "./pages/generic/ResourceList";
 import { SettingsPage } from "./pages/settings";
+import { DataCenterPage } from "./pages/datacenter";
+import { VisitList } from "./pages/visits/list";
+import { ReportList } from "./pages/reports/list";
+import { EmailMonitorPage } from "./pages/email";
 
-const resources: ResourceProps[] = [
-  { name: "clients", list: "/clients", meta: { label: "Clientes", icon: <TeamOutlined /> } },
-  { name: "inventory-items", list: "/inventory", meta: { label: "Inventario", icon: <ShoppingOutlined /> } },
-  { name: "catalog-products", list: "/catalog", meta: { label: "Catálogo", icon: <AppstoreOutlined /> } },
-  { name: "suppliers", list: "/suppliers", meta: { label: "Proveedores", icon: <ShopOutlined /> } },
-  { name: "quotes", list: "/quotes", meta: { label: "Cotizaciones", icon: <FileTextOutlined /> } },
-  { name: "sop-visits", list: "/visits", meta: { label: "Visitas SOP", icon: <CarOutlined /> } },
-  { name: "settings", list: "/settings", meta: { label: "Configuración", icon: <SettingOutlined /> } },
-];
+function AppRoutes() {
+  const { labels } = useLang();
+  const resources: ResourceProps[] = useMemo(
+    () => [
+      { name: "inneros", list: "/inneros", meta: { label: labels.inneros, icon: <DeploymentUnitOutlined /> } },
+      { name: "datacenter", list: "/datacenter", meta: { label: labels.datacenter, icon: <CommentOutlined /> } },
+      { name: "clients", list: "/clients", meta: { label: labels.clients, icon: <TeamOutlined /> } },
+      { name: "inventory-items", list: "/inventory", meta: { label: labels.inventory, icon: <ShoppingOutlined /> } },
+      { name: "catalog-products", list: "/catalog", meta: { label: labels.catalog, icon: <AppstoreOutlined /> } },
+      { name: "suppliers", list: "/suppliers", meta: { label: labels.suppliers, icon: <ShopOutlined /> } },
+      { name: "quotes", list: "/quotes", meta: { label: labels.quotes, icon: <FileTextOutlined /> } },
+      { name: "sop-visits", list: "/visits", meta: { label: labels.visits, icon: <CarOutlined /> } },
+      { name: "technical-reports", list: "/reports", meta: { label: labels.reports, icon: <FileSearchOutlined /> } },
+      { name: "email-monitor", list: "/email", meta: { label: labels.email, icon: <MailOutlined /> } },
+      { name: "settings", list: "/settings", meta: { label: labels.settings, icon: <SettingOutlined /> } },
+    ],
+    [labels],
+  );
+
+  return (
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        ...RefineThemes.Blue,
+        token: {
+          colorPrimary: "#3b82f6",
+          colorError: "#dc2626",
+          colorBgContainer: "#1e293b",
+          colorBgElevated: "#0f172a",
+          colorText: "#e2e8f0",
+          colorTextHeading: "#f8fafc",
+          colorBorder: "#334155",
+        },
+      }}
+    >
+      <AntApp>
+        <Refine
+          key={labels.datacenter}
+          dataProvider={dataProvider}
+          routerProvider={routerBindings}
+          notificationProvider={useNotificationProvider}
+          resources={resources}
+          options={{ syncWithLocation: true, warnWhenUnsavedChanges: true }}
+        >
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="/inneros" element={<HackathonPage />} />
+              <Route path="/datacenter" element={<DataCenterPage />} />
+              <Route path="/clients" element={<ClientList />} />
+              <Route path="/inventory" element={<ResourceList resource="inventory-items" />} />
+              <Route path="/catalog" element={<ResourceList resource="catalog-products" />} />
+              <Route path="/suppliers" element={<ResourceList resource="suppliers" />} />
+              <Route path="/quotes" element={<ResourceList resource="quotes" />} />
+              <Route path="/visits" element={<VisitList />} />
+              <Route path="/reports" element={<ReportList />} />
+              <Route path="/email" element={<EmailMonitorPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+          <UnsavedChangesNotifier />
+        </Refine>
+      </AntApp>
+    </ConfigProvider>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <ConfigProvider
-        theme={{
-          ...RefineThemes.Blue,
-          token: { colorPrimary: "#1e3a8a", colorError: "#dc2626" },
-        }}
-      >
-        <AntApp>
-          <Refine
-            dataProvider={dataProvider}
-            routerProvider={routerBindings}
-            notificationProvider={useNotificationProvider}
-            resources={resources}
-            options={{ syncWithLocation: true, warnWhenUnsavedChanges: true }}
-          >
-            <Routes>
-              <Route
-                element={
-                  <ThemedLayoutV2 Title={() => <span>PC Doctor OS</span>}>
-                    <Outlet />
-                  </ThemedLayoutV2>
-                }
-              >
-                <Route index element={<Dashboard />} />
-                <Route path="/clients" element={<ClientList />} />
-                <Route path="/inventory" element={<GenericList resource="inventory-items" title="Inventario hardware (DB26)" />} />
-                <Route path="/catalog" element={<GenericList resource="catalog-products" title="Catálogo (DB13)" />} />
-                <Route path="/suppliers" element={<GenericList resource="suppliers" title="Proveedores (DB25)" />} />
-                <Route path="/quotes" element={<GenericList resource="quotes" title="Cotizaciones (DB27)" />} />
-                <Route path="/visits" element={<GenericList resource="sop-visits" title="Visitas SOP (DB42)" />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Route>
-            </Routes>
-            <UnsavedChangesNotifier />
-          </Refine>
-        </AntApp>
-      </ConfigProvider>
+      <LangProvider>
+        <AppRoutes />
+      </LangProvider>
     </BrowserRouter>
   );
 }

@@ -1,31 +1,34 @@
 import { useEffect, useState } from "react";
 import { Card, Col, Row, Statistic } from "antd";
-
-const API = import.meta.env.VITE_API_URL || "http://192.168.1.4:8100/api/v1";
+import { useLang } from "../../i18n/LangContext";
+import { getApiBase } from "../../lib/api";
 
 export function Dashboard() {
+  const { pages } = useLang();
+  const p = pages.dashboard;
   const [stats, setStats] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    fetch(`${API}/stats`)
+    fetch(`${getApiBase()}/stats`)
       .then((r) => r.json())
       .then(setStats)
       .catch(console.error);
   }, []);
 
   const items = [
-    ["Clientes", stats.clients],
-    ["Inventario", stats.inventory_items],
-    ["Catálogo", stats.catalog_products],
-    ["Proveedores", stats.suppliers],
-    ["Cotizaciones", stats.quotes],
-    ["Visitas", stats.sop_visits],
+    [p.clients, stats.clients],
+    [p.inventory, stats.inventory_items],
+    [p.catalog, stats.catalog_products],
+    [p.suppliers, stats.suppliers],
+    [p.quotes, stats.quotes],
+    [p.visits, stats.sop_visits],
+    [p.reports, stats.technical_reports],
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>PC Doctor OS — Panel</h1>
-      <p>Servidor: 192.168.1.4 — MongoDB pcdoctor_swarm</p>
+    <div>
+      <h1>{p.title}</h1>
+      <p>{p.server}</p>
       <Row gutter={[16, 16]}>
         {items.map(([label, value]) => (
           <Col key={label as string} xs={24} sm={12} md={8} lg={4}>

@@ -16,9 +16,19 @@ sys.path.insert(0, str(ROOT))
 from tools.mongo import get_db  # noqa: E402
 from tools.schema import ensure_client_hub, new_id  # noqa: E402
 
+import os
+
 NOTION_EXPORT_BASE = Path(
-    "/home/rlopez/backups/20260518_032357/ai-server-v2/n8n/notion_data"
+    os.environ.get(
+        "NOTION_EXPORT_DIR",
+        "/home/rlopez/data/notion_export",
+    )
 )
+# Fallback legacy si aún no migraste
+if not NOTION_EXPORT_BASE.exists():
+    _legacy = Path("/home/rlopez/backups/20260518_032357/ai-server-v2/n8n/notion_data")
+    if _legacy.exists():
+        NOTION_EXPORT_BASE = _legacy
 
 
 def _now():

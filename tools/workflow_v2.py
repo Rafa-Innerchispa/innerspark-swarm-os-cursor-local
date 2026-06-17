@@ -67,7 +67,15 @@ def start_field_visit(raw_input: str, inspection_id: str | None = None, ruc: str
         "created_at": _now(),
         "updated_at": _now(),
     }
-    db.sop_visits.insert_one(visit)
+    from pymongo.errors import DuplicateKeyError
+
+    try:
+        db.sop_visits.insert_one(visit)
+    except DuplicateKeyError:
+        existing = db.sop_visits.find_one({"legacy_inspection_id": iid}, {"_id": 0})
+        if existing:
+            return {**existing, "inspection_id": iid}
+        raise
     visit.pop("_id", None)
     log_action("director", "sop_visit_started", {"visit_id": visit_id, "code": serial["code"], "target_type": "sop_visit", "target_id": visit_id})
     return {**visit, "inspection_id": iid}
@@ -164,22 +172,31 @@ def save_quote_v2(inspection_id: str, quote: dict, client_id: str | None = None)
     else:
         serial = next_serial(db, "PCD", "COT")
         quote_id = new_id("qot")
-        db.quotes.insert_one(
-            {
-                "quote_id": quote_id,
-                "code": serial["code"],
-                "legacy_inspection_id": inspection_id,
-                "visit_id": visit["visit_id"],
-                "report_id": report_id,
-                "client_id": client_id,
-                "client_ruc": quote.get("client_ruc"),
-                "estado": "Borrador",
-                "moneda": "USD",
-                "iva_15": True,
-                "scope": quote.get("scope", ""),
-                "created_at": _now(),
-            }
-        )
+        from pymongo.errors import DuplicateKeyError
+
+        try:
+            db.quotes.insert_one(
+                {
+                    "quote_id": quote_id,
+                    "code": serial["code"],
+                    "legacy_inspection_id": inspection_id,
+                    "visit_id": visit["visit_id"],
+                    "report_id": report_id,
+                    "client_id": client_id,
+                    "client_ruc": quote.get("client_ruc"),
+                    "estado": "Borrador",
+                    "moneda": "USD",
+                    "iva_15": True,
+                    "scope": quote.get("scope", ""),
+                    "created_at": _now(),
+                }
+            )
+        except DuplicateKeyError:
+            dup = db.quotes.find_one({"legacy_inspection_id": inspection_id}, {"_id": 0})
+            if dup:
+                quote_id = dup["quote_id"]
+            else:
+                raise
 
     # DB38 líneas
     db.quote_lines.delete_many({"quote_id": quote_id})
@@ -217,11 +234,6 @@ def save_quote_v2(inspection_id: str, quote: dict, client_id: str | None = None)
             }
         },
     )
-
-    # Legacy compat
-    from tools.mongo import save_quote
-
-    save_quote(inspection_id, {**quote, **calc, "iva": calc["iva"]})
 
     header = db.quotes.find_one({"quote_id": quote_id}, {"_id": 0})
     _link_hub(db, client_id, "cotizaciones", quote_id)

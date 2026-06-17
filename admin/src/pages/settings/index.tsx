@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Button, Card, Col, ColorPicker, Form, Input, Row, Typography, Upload, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadRequestOption } from "rc-upload/lib/interface";
+import { useLang } from "../../i18n/LangContext";
+import { getApiBase, getApiRoot } from "../../lib/api";
 
-const API = import.meta.env.VITE_API_URL || "http://192.168.1.4:8100/api/v1";
+const API = getApiBase();
 
 type Company = {
   company_id: string;
@@ -16,6 +18,8 @@ type Company = {
 };
 
 export function SettingsPage() {
+  const { pages } = useLang();
+  const st = pages.settings;
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +30,7 @@ export function SettingsPage() {
       const json = await res.json();
       setCompanies(json.data || []);
     } catch {
-      message.error("No se pudo cargar empresas");
+      message.error(st.loadError);
     } finally {
       setLoading(false);
     }
@@ -40,14 +44,14 @@ export function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
-    message.success("Guardado");
+    message.success(st.saved);
     load();
   };
 
   const seedCatalog = async () => {
     const res = await fetch(`${API}/companies/seed-catalog`, { method: "POST" });
     const json = await res.json();
-    message.info(json.message || "Listo");
+    message.info(json.message || st.seedDone);
   };
 
   const uploadLogo = (companyId: string) => async (opt: UploadRequestOption) => {
@@ -56,7 +60,7 @@ export function SettingsPage() {
     fd.append("file", file);
     try {
       await fetch(`${API}/companies/${companyId}/logo`, { method: "POST", body: fd });
-      message.success("Logo actualizado");
+      message.success(st.logoUpdated);
       load();
       opt.onSuccess?.({});
     } catch (e) {
@@ -64,19 +68,15 @@ export function SettingsPage() {
     }
   };
 
-  const brandingUrl = (file: string) =>
-    `http://192.168.1.4:8100/assets/branding/${file}`;
+  const brandingUrl = (file: string) => `${getApiRoot()}/assets/branding/${file}`;
 
   return (
-    <div style={{ padding: 24 }}>
-      <Typography.Title level={3}>Configuración multiempresa</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        Aquí cambias logos, colores y datos de marca. Las cotizaciones PDF usarán la empresa que elijas al crear el documento.
-        También puedes pedírselo al chat IA, pero logos y colores deben quedar guardados aquí (fuente de verdad).
-      </Typography.Paragraph>
+    <div>
+      <Typography.Title level={3}>{st.title}</Typography.Title>
+      <Typography.Paragraph type="secondary">{st.intro}</Typography.Paragraph>
 
       <Button type="primary" onClick={seedCatalog} style={{ marginBottom: 16 }}>
-        Crear servicios InnerChispa en catálogo
+        {st.seedCatalog}
       </Button>
 
       <Row gutter={[16, 16]}>
@@ -111,27 +111,27 @@ export function SettingsPage() {
                   })
                 }
               >
-                <Form.Item name="brand_name" label="Nombre comercial">
+                <Form.Item name="brand_name" label={st.brandName}>
                   <Input />
                 </Form.Item>
-                <Form.Item name="legal_name" label="Razón social">
+                <Form.Item name="legal_name" label={st.legalName}>
                   <Input />
                 </Form.Item>
-                <Form.Item name="tagline" label="Eslogan">
+                <Form.Item name="tagline" label={st.tagline}>
                   <Input />
                 </Form.Item>
-                <Form.Item name="primary" label="Color primario">
+                <Form.Item name="primary" label={st.primaryColor}>
                   <ColorPicker format="hex" />
                 </Form.Item>
-                <Form.Item name="secondary" label="Color secundario">
+                <Form.Item name="secondary" label={st.secondaryColor}>
                   <ColorPicker format="hex" />
                 </Form.Item>
-                <Form.Item label="Cambiar logo">
+                <Form.Item label={st.changeLogo}>
                   <Upload customRequest={uploadLogo(c.company_id)} showUploadList={false} accept="image/*">
-                    <Button icon={<UploadOutlined />}>Subir imagen</Button>
+                    <Button icon={<UploadOutlined />}>{st.uploadImage}</Button>
                   </Upload>
                 </Form.Item>
-                <Button type="primary" htmlType="submit">Guardar</Button>
+                <Button type="primary" htmlType="submit">{st.save}</Button>
               </Form>
             </Card>
           </Col>

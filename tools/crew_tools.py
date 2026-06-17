@@ -36,6 +36,11 @@ def sri_lookup_tool(ruc: str) -> str:
 @tool("Crear o actualizar cliente en MongoDB")
 def upsert_client_tool(ruc: str, name: str, address: str = "", city: str = "") -> str:
     """Guarda cliente en la base de datos. Usar después de consultar SRI."""
+    from tools.client_sanitize import normalize_tax_id_field, valid_tax_id
+
+    ruc = normalize_tax_id_field(ruc)
+    if not valid_tax_id(ruc):
+        return json.dumps({"error": "RUC/cédula vacío o inválido"}, ensure_ascii=False)
     client = create_client({"ruc": ruc, "name": name, "address": address, "city": city})
     log_action("cliente", "upsert_client", {"ruc": ruc})
     return json.dumps(client, ensure_ascii=False, default=str)
@@ -87,7 +92,8 @@ def start_inspection_record(raw_input: str, inspection_id: str | None = None) ->
     """Crea registro de inspección (no es tool de agente, uso interno)."""
     inspection_id = inspection_id or uuid.uuid4().hex[:12]
     ruc = _extract_ruc(raw_input)
-    create_inspection(inspection_id, raw_input, ruc=ruc)
+    if not get_inspection(inspection_id):
+        create_inspection(inspection_id, raw_input, ruc=ruc)
     log_action("director", "inspection_started", {"inspection_id": inspection_id})
     return inspection_id
 

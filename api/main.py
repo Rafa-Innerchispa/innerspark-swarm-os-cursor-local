@@ -12,7 +12,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from agents.crew import run_inspection_flow
+from api.assistant import router as assistant_router
+from api.auth_routes import router as auth_router
+from api.chat_store import router as chat_router
 from api.crud_v1 import router as crud_v1_router
+from api.email_routes import router as email_router
+from api.hackathon_routes import router as hackathon_router
+from api.voice_agent import router as voice_agent_router
 from config import API_HOST, API_PORT
 from tools.file_reader import read_file
 from tools.media_store import save_upload
@@ -34,13 +40,33 @@ app.add_middleware(
         "http://192.168.1.4:5173",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://192.168.1.4:5180",
+        "http://localhost:5180",
+        "http://127.0.0.1:5180",
+        "http://192.168.1.4:5174",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        # UI Google AI Studio (Express+Vite dev)
+        "http://192.168.1.4:3000",
+        "http://192.168.1.4:5180",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
     ],
+    allow_origin_regex=r"https://.*\.ngrok-free\.(app|dev)|https://.*\.ngrok\.io|http://192\.168\.\d+\.\d+:(5173|5174|5175|5180)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(crud_v1_router)
+app.include_router(assistant_router)
+app.include_router(auth_router)
+app.include_router(chat_router)
+app.include_router(voice_agent_router)
+app.include_router(email_router)
+app.include_router(hackathon_router)
 
 _branding = ROOT / "assets" / "branding"
 _branding.mkdir(parents=True, exist_ok=True)
@@ -77,8 +103,20 @@ def startup():
     ensure_indexes()
     seed_inventory_if_empty()
     db = get_db()
+    from api.auth_users import ensure_users
+
     ensure_companies(db)
     seed_innerchispa_catalog(db)
+    ensure_users(db)
+    db.chat_messages.create_index([("username", 1), ("created_at", -1)])
+    db.chat_messages.create_index([("session_id", 1), ("created_at", 1)])
+    db.chat_sessions.create_index([("username", 1), ("updated_at", -1)])
+    db.chat_sessions.create_index("session_id", unique=True)
+    db.chat_files.create_index([("session_id", 1), ("created_at", -1)])
+    db.email_accounts.create_index("email_account_id", unique=True)
+    db.email_accounts.create_index("address", unique=True)
+    db.email_messages.create_index([("email_account_id", 1), ("uid", 1)], unique=True)
+    db.email_messages.create_index([("importance", 1), ("received_at", -1)])
 
 
 @app.get("/status")

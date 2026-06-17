@@ -39,7 +39,13 @@ def create_client(data: dict) -> dict:
     from tools.schema import ensure_client_hub
 
     db = get_db()
-    existing = db.clients.find_one({"ruc": data["ruc"]}, {"_id": 0})
+    from tools.client_sanitize import normalize_tax_id_field, valid_tax_id
+
+    ruc = normalize_tax_id_field(data.get("ruc"))
+    if not valid_tax_id(ruc):
+        raise ValueError("RUC/cédula inválido o vacío")
+    data = {**data, "ruc": ruc}
+    existing = db.clients.find_one({"ruc": ruc}, {"_id": 0})
     client_id = (existing or {}).get("client_id") or new_id("cli")
     doc = {
         "client_id": client_id,
@@ -80,7 +86,15 @@ def create_inspection(inspection_id: str, raw_input: str, ruc: str | None = None
         "created_at": _now(),
         "updated_at": _now(),
     }
-    db.inspections.insert_one(doc)
+    from pymongo.errors import DuplicateKeyError
+
+    try:
+        db.inspections.insert_one(doc)
+    except DuplicateKeyError:
+        existing = db.inspections.find_one({"inspection_id": inspection_id}, {"_id": 0})
+        if existing:
+            return existing
+        raise
     doc.pop("_id", None)
     return doc
 

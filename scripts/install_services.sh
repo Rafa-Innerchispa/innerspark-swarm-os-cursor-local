@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# Instala unidades systemd para que todo arranque al reiniciar el servidor.
+# Instala unidades systemd — todo arranca solo tras apagón/reinicio.
 set -euo pipefail
 
 PROJECT="/home/rlopez/projects/innerspark-swarm-os-cursor-local"
 USER_NAME="rlopez"
 
+chmod +x "${PROJECT}/run_portal.sh" "${PROJECT}/run_api.sh" "${PROJECT}/run_admin.sh" "${PROJECT}/run_ngrok.sh"
+chmod +x "${PROJECT}/scripts/ensure_mongo.sh" "${PROJECT}/scripts/bootstrap_on_boot.sh"
+
 sudo tee /etc/systemd/system/swarm-api.service >/dev/null <<EOF
 [Unit]
 Description=Swarm-OS API (PC Doctor FastAPI)
-After=network-online.target mongodb.service docker.service
-Wants=network-online.target
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple
 User=${USER_NAME}
 Group=${USER_NAME}
 WorkingDirectory=${PROJECT}
+ExecStartPre=${PROJECT}/scripts/ensure_mongo.sh
 ExecStart=/usr/bin/bash ${PROJECT}/run_api.sh
 Restart=always
 RestartSec=5
@@ -27,7 +31,7 @@ EOF
 
 sudo tee /etc/systemd/system/swarm-admin.service >/dev/null <<EOF
 [Unit]
-Description=PC Doctor Admin (Refine React)
+Description=PC Doctor Admin (Refine React + InnerOS)
 After=network-online.target swarm-api.service
 Wants=network-online.target
 
@@ -38,7 +42,47 @@ Group=${USER_NAME}
 WorkingDirectory=${PROJECT}
 ExecStart=/usr/bin/bash ${PROJECT}/run_admin.sh
 Restart=always
-RestartSec=5
+RestartSec=10
+TimeoutStartSec=300
+Environment=ADMIN_PORT=5173
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo tee /etc/systemd/system/swarm-ngrok.service >/dev/null <<EOF
+[Unit]
+Description=ngrok tunnel — public Devpost demo (:5173)
+After=network-online.target swarm-admin.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${USER_NAME}
+Group=${USER_NAME}
+WorkingDirectory=${PROJECT}
+ExecStart=/usr/bin/bash ${PROJECT}/run_ngrok.sh
+Restart=always
+RestartSec=15
+Environment=ADMIN_PORT=5173
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo tee /etc/systemd/system/swarm-bootstrap.service >/dev/null <<EOF
+[Unit]
+Description=InnerOS hackathon bootstrap (seed demo + save public URL)
+After=swarm-api.service swarm-ngrok.service
+Wants=swarm-api.service
+
+[Service]
+Type=oneshot
+User=${USER_NAME}
+Group=${USER_NAME}
+WorkingDirectory=${PROJECT}
+ExecStart=/usr/bin/bash ${PROJECT}/scripts/bootstrap_on_boot.sh
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -82,16 +126,31 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-chmod +x "${PROJECT}/run_portal.sh" "${PROJECT}/run_api.sh" "${PROJECT}/run_admin.sh"
-
 sudo systemctl daemon-reload
-sudo systemctl enable swarm-api.service swarm-admin.service ralf-portal.service filebrowser.service
-sudo systemctl restart ralf-portal.service filebrowser.service swarm-api.service swarm-admin.service || true
+sudo systemctl enable \
+  swarm-api.service \
+  swarm-admin.service \
+  swarm-ngrok.service \
+  swarm-bootstrap.service \
+  ralf-portal.service \
+  filebrowser.service
+
+sudo systemctl restart swarm-api.service
+sudo systemctl restart swarm-admin.service
+sudo systemctl restart swarm-ngrok.service || true
+sudo systemctl start swarm-bootstrap.service || true
+sudo systemctl restart ralf-portal.service filebrowser.service || true
 
 echo ""
-echo "Servicios habilitados. Tras reinicio arrancan solos."
-echo "  Portal:     http://192.168.1.4:8800"
-echo "  Admin:      http://192.168.1.4:5173"
-echo "  Archivos:   http://192.168.1.4:8081"
+echo "=== Arranque automático configurado ==="
+echo "Tras reinicio o corte de luz, todo sube solo:"
+echo "  swarm-api      → :8100"
+echo "  swarm-admin    → :5173 (build + preview)"
+echo "  swarm-ngrok    → URL pública Devpost"
+echo "  swarm-bootstrap → seed demo + data/public_demo_url.txt"
 echo ""
-echo "FileBrowser — primera vez: usuario admin / contraseña admin (cámbiala al entrar)."
+echo "Tu URL pública (cuando ngrok esté listo):"
+echo "  cat ${PROJECT}/data/public_demo_url.txt"
+echo ""
+echo "Estado:"
+systemctl is-active swarm-api swarm-admin swarm-ngrok 2>/dev/null || true

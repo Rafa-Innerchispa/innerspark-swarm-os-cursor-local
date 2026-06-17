@@ -26,7 +26,8 @@ Todo lo demás (import, reiniciar API, admin, scripts) **lo ejecuta el agente**.
 | Qué | URL desde Windows | ¿Para qué? |
 |-----|-------------------|------------|
 | **RALF IA Portal v2.0** | http://192.168.1.4:8800 | **Panel único** — enlaces a todos los servicios |
-| **Gestor de archivos** | http://192.168.1.4:8081 | Arrastrar carpetas, subir y editar textos sin SSH |
+| **Gestor de archivos** | http://192.168.1.4:8081 | Usuario `admin` — si no entra: `bash scripts/reset_filebrowser_password.sh` |
+| **Centro de Datos (chat+voz)** | http://192.168.1.4:5173/datacenter | Crear/consultar por texto o micrófono |
 
 ### Servicios individuales
 
