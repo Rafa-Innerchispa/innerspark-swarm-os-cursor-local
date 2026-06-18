@@ -14,12 +14,22 @@ Ralphi-IA-Gdrive:RalphiIA_Backups/disaster_recovery/
 
 ## ¿Qué respaldos existen HOY?
 
-| Qué | Dónde | Frecuencia | Cubre Swarm-OS |
-|-----|-------|------------|----------------|
-| Ralphi operacional | `ralphi_backups/` → Google Drive | 3x/día (8,14,22h) | NO |
-| Ralphi memoria completa | `ralphi_backups/` → Google Drive | Domingo 3h | NO |
-| AnythingLLM + inneros .env | `/home/rlopez/backups/` | Diario 2h | NO |
-| **Disaster recovery** | `backups/disaster_recovery/` → **Ralphi-IA-Gdrive** | **Diario 1:30 AM (cron)** | **SÍ** |
+**Verificado 2026-06-18:** backup diario OK local + Google Drive.
+
+| Qué | Dónde | Frecuencia | Cubre Swarm-OS + Hackathon |
+|-----|-------|------------|----------------------------|
+| **Disaster recovery** | `data/backups/disaster_recovery/` → **Ralphi-IA-Gdrive** | **Diario 1:30 AM** | **SÍ** (código, Mongo, .env, data/docs) |
+| Snapshot ligero | `data/backups/snapshots/` | 8:00, 14:00, 22:00 | Parcial (repo sin node_modules) |
+| Ralphi operacional | `ralphi_backups/` → Google Drive | 3x/día | NO (legacy Ralphi) |
+| Crontab autostart | `@reboot` + cada 10 min | continuo | Relanza servicios + ngrok |
+
+### Verificar ahora
+
+```bash
+bash /home/rlopez/projects/innerspark-swarm-os-cursor-local/scripts/verify_backup.sh
+```
+
+Estado JSON: `/home/rlopez/data/manifests/swarm-os-estado.json`
 
 ## Git — estado real
 

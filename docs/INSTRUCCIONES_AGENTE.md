@@ -2,7 +2,7 @@
 
 **Para Rafael:** cuando cambies de modelo o se acaben los créditos, abre Cursor en este proyecto y pega el **prompt de arranque** al final de este documento. No necesitas el chat anterior.
 
-**Última actualización:** 2026-06-09
+**Última actualización:** 2026-06-18
 
 ---
 
@@ -25,8 +25,11 @@ Sistema multi-agente **local** para **PC Doctor S.A.** (Ecuador):
 | Archivo | Para qué leerlo |
 |---------|-----------------|
 | **`AGENTS.md`** (raíz) | Entrada rápida para Cursor |
+| **`docs/CONTINUIDAD_IA.md`** | **Guía maestra** — backups, rutas, hackathon, prompt arranque |
 | **`docs/INSTRUCCIONES_AGENTE.md`** | Este archivo — onboarding |
 | **`docs/MAPA_PROYECTO.md`** | Constitución: visión, agentes, endpoints, decisiones, fases |
+| **`docs/HACKATHON_BAND_OF_AGENTS.md`** | Demo Band :5190 / :8200 |
+| **`ARRANQUE_AUTOMATICO.md`** | systemd, ngrok, autostart |
 | **`docs/ESQUEMA_MONGODB_DBxx.md`** | Esquema completo DB01–DB52 + colecciones Mongo |
 | **`docs/CANON_CORRECCIONES_DBxx.md`** | Correcciones vs Notion (DB41, DB12, etc.) |
 | **`docs/RECUPERACION_DESASTRE.md`** | Backups y restauración |
@@ -41,10 +44,13 @@ Sistema multi-agente **local** para **PC Doctor S.A.** (Ecuador):
 | Qué | Dónde |
 |-----|-------|
 | Clientes, cotizaciones, etc. | MongoDB `pcdoctor_swarm` en `:27017` |
-| Código | Este repo en disco (+ git local) |
-| Credenciales | `.env` (no en git) |
+| Código | Este repo en disco (+ git) |
+| Credenciales | `.env` (no en git; incluido en disaster recovery cifrado en tar) |
 | Media subida | `data/media/` |
 | Exportables | `data/exports/` |
+| Estado operativo JSON | `/home/rlopez/data/manifests/swarm-os-estado.json` |
+| Backups nube | `Ralphi-IA-Gdrive:RalphiIA_Backups/disaster_recovery/` |
+| Docs memoria organizacional | `/home/rlopez/data/docs/` |
 
 ---
 

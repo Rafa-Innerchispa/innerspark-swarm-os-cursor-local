@@ -10,6 +10,20 @@ from typing import Any
 from tools.email_providers import detect_provider
 
 
+def smtp_settings_for_account(acc: dict[str, Any]) -> dict[str, Any]:
+    """SMTP a partir de la fila email_accounts (prioriza imap_host del hosting)."""
+    address = (acc.get("address") or acc.get("imap_user") or "").strip()
+    imap_host = (acc.get("imap_host") or "").strip()
+    if imap_host:
+        if imap_host.startswith("imap."):
+            smtp_host = imap_host.replace("imap.", "smtp.", 1)
+        else:
+            # cPanel / correo corporativo: mismo servidor que IMAP (mail.dominio)
+            smtp_host = imap_host
+        return {"smtp_host": smtp_host, "smtp_port": 587, "use_tls": True}
+    return smtp_settings_for_address(address)
+
+
 def smtp_settings_for_address(address: str) -> dict[str, Any]:
     """Deriva host/puerto SMTP a partir del dominio del buzón."""
     domain = address.strip().lower().split("@")[-1] if "@" in address else ""
@@ -69,7 +83,7 @@ def send_smtp_email(
 def send_via_account(acc: dict, *, to_addr: str, subject: str, body: str, from_name: str) -> dict[str, Any]:
     """Envía usando una fila de email_accounts (mismas credenciales IMAP)."""
     address = acc.get("address") or acc.get("imap_user") or ""
-    smtp = smtp_settings_for_address(address)
+    smtp = smtp_settings_for_account(acc)
     return send_smtp_email(
         smtp_host=smtp["smtp_host"],
         smtp_port=int(smtp.get("smtp_port", 587)),
@@ -82,3 +96,46 @@ def send_via_account(acc: dict, *, to_addr: str, subject: str, body: str, from_n
         from_addr=address,
         use_tls=bool(smtp.get("use_tls", True)),
     )
+
+
+def send_via_account_with_attachments(
+    acc: dict,
+    *,
+    to_addr: str,
+    subject: str,
+    body: str,
+    from_name: str,
+    attachments: list[tuple[str, bytes, str]],
+) -> dict[str, Any]:
+    """Envía con adjuntos (nombre, bytes, mime_type)."""
+    from email.mime.application import MIMEApplication
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    address = acc.get("address") or acc.get("imap_user") or ""
+    smtp = smtp_settings_for_account(acc)
+    if not to_addr or not address:
+        return {"ok": False, "error": "Faltan direcciones"}
+
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = formataddr((from_name, address)) if from_name else address
+    msg["To"] = to_addr
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    for fname, data, mime in attachments:
+        part = MIMEApplication(data, Name=fname)
+        part.add_header("Content-Disposition", "attachment", filename=fname)
+        if mime:
+            part.set_type(mime)
+        msg.attach(part)
+
+    try:
+        with smtplib.SMTP(smtp["smtp_host"], int(smtp.get("smtp_port", 587)), timeout=45) as server:
+            if smtp.get("use_tls", True):
+                server.starttls()
+            server.login(acc.get("imap_user") or address, acc.get("imap_password", ""))
+            server.sendmail(address, [to_addr], msg.as_string())
+        return {"ok": True, "to": to_addr, "subject": subject, "attachments": len(attachments)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

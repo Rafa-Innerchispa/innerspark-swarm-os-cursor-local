@@ -8,7 +8,15 @@ data/media/*
 !data/media/.gitkeep
 data/exports/*
 !data/exports/.gitkeep
+data/ngrok.runtime.yml
+data/*.log
+data/hackathon_public_url.txt
+data/public_demo_url.txt
 .pytest_cache/
+.cursor/
+BACKUP_BEFORE_BAND.patch
+*.swp
+*~
 
 # Secretos — NUNCA subir a GitHub
 *.pem
@@ -24,3 +32,11 @@ admin/node_modules/
 admin/dist/
 admin/.env
 admin/.env.local
+
+# Hackathon Band (BOA26)
+hackathon_band/.band_local/
+hackathon_band/ui/node_modules/
+hackathon_band/ui/dist/
+hackathon_band/outputs/*.md
+hackathon_band/outputs/*.pdf
+!hackathon_band/outputs/.gitkeep

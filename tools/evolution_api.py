@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -138,7 +139,7 @@ def resolve_connected_instance(preferred: str | None = None) -> tuple[str | None
     return None, "no_instance"
 
 
-def send_whatsapp(number: str, text: str, instance: str | None = None) -> dict[str, Any]:
+def send_whatsapp(number: str, text: str, instance: str | None = None, *, skip_existence_check: bool = False) -> dict[str, Any]:
     pref = instance or EVOLUTION_INSTANCE
     inst, inst_note = resolve_connected_instance(pref)
     if not inst:
@@ -158,8 +159,10 @@ def send_whatsapp(number: str, text: str, instance: str | None = None) -> dict[s
         }
 
     chk = check_number(inst, digits)
-    if chk.get("ok") and not chk.get("exists"):
+    if chk.get("ok") and not chk.get("exists") and not skip_existence_check:
         return {"status": "error", "message": f"El número {digits} no tiene WhatsApp activo", "check": chk}
+    if chk.get("ok") and not chk.get("exists") and skip_existence_check:
+        pass  # hackathon: intentar envío igual (Evolution a veces marca false)
 
     try:
         r = requests.post(
@@ -190,5 +193,100 @@ def send_whatsapp(number: str, text: str, instance: str | None = None) -> dict[s
         "number": digits,
         "instance": inst,
         "instance_note": inst_note,
+        "message": body.get("message") if isinstance(body, dict) and not r.ok else None,
+    }
+
+
+def _prepare_whatsapp_recipient(
+    number: str, instance: str | None = None, *, skip_existence_check: bool = False
+) -> tuple[str | None, str, str, dict[str, Any] | None]:
+    """Devuelve (inst, digits, inst_note, error_dict)."""
+    pref = instance or EVOLUTION_INSTANCE
+    inst, inst_note = resolve_connected_instance(pref)
+    if not inst:
+        return None, "", inst_note, {"status": "error", "message": "No Evolution instance configured", "instance_note": inst_note}
+    digits = "".join(c for c in number if c.isdigit())
+    if not digits:
+        return inst, "", inst_note, {"status": "error", "message": "número WhatsApp inválido"}
+    is_open, linked = _instance_is_open(inst)
+    if not is_open:
+        return inst, digits, inst_note, {
+            "status": "error",
+            "message": f"Instance «{inst}» not connected (must be open). Server account: {linked or '—'}",
+            "linked_number": linked,
+            "instance_note": inst_note,
+        }
+    chk = check_number(inst, digits)
+    if chk.get("ok") and not chk.get("exists") and not skip_existence_check:
+        return inst, digits, inst_note, {
+            "status": "error",
+            "message": f"El número {digits} no tiene WhatsApp activo",
+            "check": chk,
+        }
+    return inst, digits, inst_note, None
+
+
+def send_whatsapp_document(
+    number: str,
+    file_path: str | Path,
+    caption: str = "",
+    instance: str | None = None,
+    file_name: str | None = None,
+    *,
+    skip_existence_check: bool = False,
+) -> dict[str, Any]:
+    """Envía documento (.md, .pdf, etc.) por WhatsApp vía Evolution sendMedia."""
+    import base64
+
+    path = Path(file_path)
+    if not path.is_file():
+        return {"status": "error", "message": f"Archivo no encontrado: {path}"}
+
+    inst, digits, inst_note, err = _prepare_whatsapp_recipient(
+        number, instance, skip_existence_check=skip_existence_check
+    )
+    if err:
+        return err
+
+    raw = path.read_bytes()
+    if len(raw) > 15_000_000:
+        return {"status": "error", "message": "Archivo demasiado grande para WhatsApp"}
+
+    b64 = base64.b64encode(raw).decode("ascii")
+    fname = file_name or path.name
+    media = f"data:text/markdown;base64,{b64}"
+
+    try:
+        r = requests.post(
+            f"{_base()}/message/sendMedia/{inst}",
+            headers=_headers(),
+            json={
+                "number": digits,
+                "mediatype": "document",
+                "mimetype": "text/markdown",
+                "fileName": fname,
+                "caption": (caption or "")[:900],
+                "media": media,
+                "delay": 800,
+            },
+            timeout=60,
+        )
+    except requests.exceptions.Timeout:
+        return {"status": "error", "message": "Evolution timeout enviando documento"}
+    except requests.exceptions.RequestException as e:
+        return {"status": "error", "message": str(e)}
+
+    try:
+        body = r.json()
+    except Exception:
+        body = {"raw": r.text[:500]}
+    return {
+        "status": "sent" if r.ok else "error",
+        "http_status": r.status_code,
+        "response": body,
+        "number": digits,
+        "instance": inst,
+        "instance_note": inst_note,
+        "file": fname,
         "message": body.get("message") if isinstance(body, dict) and not r.ok else None,
     }

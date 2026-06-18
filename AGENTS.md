@@ -4,14 +4,16 @@
 
 ## Lee esto PRIMERO (orden obligatorio)
 
-1. [`docs/INSTRUCCIONES_AGENTE.md`](docs/INSTRUCCIONES_AGENTE.md) — cómo retomar sin romper nada
-2. [`docs/MAPA_PROYECTO.md`](docs/MAPA_PROYECTO.md) — visión, qué funciona, qué falta, decisiones tomadas
+1. [`docs/CONTINUIDAD_IA.md`](docs/CONTINUIDAD_IA.md) — guía maestra, backups, hackathon, continuidad
+2. [`docs/INSTRUCCIONES_AGENTE.md`](docs/INSTRUCCIONES_AGENTE.md) — cómo retomar sin romper nada
+3. [`docs/MAPA_PROYECTO.md`](docs/MAPA_PROYECTO.md) — visión, qué funciona, qué falta, decisiones tomadas
 3. [`docs/ESQUEMA_MONGODB_DBxx.md`](docs/ESQUEMA_MONGODB_DBxx.md) — esquema canónico DB01–DB52
 4. [`docs/CANON_CORRECCIONES_DBxx.md`](docs/CANON_CORRECCIONES_DBxx.md) — errores corregidos vs Notion
 5. [`docs/SOPS_LOGICA_OPERATIVA.md`](docs/SOPS_LOGICA_OPERATIVA.md) — SOPs + invariantes Playbook
 6. [`docs/RELACIONES_Y_FLUJOS.md`](docs/RELACIONES_Y_FLUJOS.md) — relaciones DB → Mongo + gates
 7. [`docs/ARQUITECTURA_FLUJOS.md`](docs/ARQUITECTURA_FLUJOS.md) — por qué no las 52 DB en cada flujo
-7. [`docs/ACCESO_RED.md`](docs/ACCESO_RED.md) — Windows usa 192.168.1.4, no localhost
+8. [`docs/ACCESO_RED.md`](docs/ACCESO_RED.md) — Windows usa 192.168.1.4, no localhost
+9. [`docs/RECUPERACION_DESASTRE.md`](docs/RECUPERACION_DESASTRE.md) — backups (`scripts/verify_backup.sh`)
 
 ## Reglas al programar
 

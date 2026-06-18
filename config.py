@@ -17,6 +17,11 @@ API_PORT = int(os.getenv("API_PORT", "8100"))
 
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "")
 
+# Evolution API — WhatsApp (:8082)
+EVOLUTION_BASE_URL = os.getenv("EVOLUTION_BASE_URL", "http://127.0.0.1:8082")
+EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
+EVOLUTION_INSTANCE = os.getenv("EVOLUTION_INSTANCE", "")
+
 # API RUC Intuito/Deuna (credenciales propias — ver manual ASG-INFO-011)
 RUC_API_TOKEN_URL = os.getenv(
     "RUC_API_TOKEN_URL",
@@ -36,6 +41,15 @@ OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava:7b")
 
 MEDIA_DIR = Path(os.getenv("MEDIA_DIR", ROOT / "data" / "media"))
 EXPORTS_DIR = Path(os.getenv("EXPORTS_DIR", ROOT / "data" / "exports"))
+CHAT_UPLOADS_DIR = Path(os.getenv("CHAT_UPLOADS_DIR", ROOT / "data" / "chat_uploads"))
+
+# Hackathon / Devpost (UI Google AI Studio)
+HACKATHON_UI_ROOT = Path(
+    os.getenv("HACKATHON_UI_ROOT", "/home/rlopez/projects/swarm-os-google_ai_studio")
+)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+NGROK_AUTHTOKEN = os.getenv("NGROK_AUTHTOKEN", "")
 
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+CHAT_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)

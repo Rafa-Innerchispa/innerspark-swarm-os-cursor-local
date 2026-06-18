@@ -125,6 +125,28 @@ Correcciones canónicas vs Notion: `docs/CANON_CORRECCIONES_DBxx.md`
 
 La orquestación y validaciones las construimos aquí, con MongoDB + gates del Playbook.
 
+## Hackathon Band of Agents (BOA26)
+
+Código de la demo multi-agente con **Band**, memoria MongoDB real y entrega WhatsApp/email.
+
+| Qué | Dónde |
+|-----|--------|
+| **Rama del hackathon** | [`hackathon/band-fireless-2026`](https://github.com/Rafa-Innerchispa/innerspark-swarm-os-cursor-local/tree/hackathon/band-fireless-2026) |
+| Código pipeline + UI | `hackathon_band/` |
+| Variables requeridas | `.env.example` + `hackathon_band/.env.example` |
+| Documentación | `docs/HACKATHON_BAND_OF_AGENTS.md` |
+
+```bash
+# Verificar configuración (sin ejecutar pipeline)
+python hackathon_band/hackathon_demo.py --check
+
+# API hackathon :8200 + UI :5190
+./run_hackathon_api.sh
+./run_hackathon_ui.sh
+```
+
+**Secretos:** copia `.env.example` → `.env` en el servidor y rellena keys localmente. **Nunca** commitees `.env`.
+
 ## Proyectos relacionados (no mezclar)
 
 - `inneros/` — hackathon Google AI Studio
