@@ -5,6 +5,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+import socket
+import threading
+import time
 from urllib.parse import urljoin
 
 import httpx
@@ -16,6 +19,19 @@ from fastapi.responses import StreamingResponse
 INNEROS = os.getenv("GATEWAY_INNEROS", "http://127.0.0.1:5173").rstrip("/")
 HACKATHON = os.getenv("GATEWAY_HACKATHON", "http://127.0.0.1:5190").rstrip("/")
 SWARM_API = os.getenv("GATEWAY_SWARM_API", "http://127.0.0.1:8100").rstrip("/")
+UIPATH_COPILOT = os.getenv("GATEWAY_UIPATH_COPILOT", "http://127.0.0.1:8097").rstrip("/")
+CHUTES_DEPOSIT = os.getenv("GATEWAY_CHUTES_DEPOSIT", "http://127.0.0.1:8098").rstrip("/")
+GITLAB_TRANSCEND = os.getenv("GATEWAY_GITLAB_TRANSCEND", "http://127.0.0.1:8095").rstrip("/")
+FUNDING_HUB = os.getenv("GATEWAY_FUNDING_HUB", "http://127.0.0.1:8099").rstrip("/")
+RAPHI_IA_MCP = os.getenv("GATEWAY_RAPHI_IA_MCP", "http://127.0.0.1:8102").rstrip("/")
+RAPHI_IA_AUTH = os.getenv("GATEWAY_RAPHI_IA_AUTH", "http://127.0.0.1:8103").rstrip("/")
+AMD_OPS_UI = os.getenv("GATEWAY_AMD_OPS_UI", "http://127.0.0.1:8220").rstrip("/")
+AMD_OPS_API = os.getenv("GATEWAY_AMD_OPS_API", "http://127.0.0.1:8220").rstrip("/")
+RAPHI_IA_PANEL = os.getenv("GATEWAY_RAPHI_IA_PANEL", "http://127.0.0.1:2002").rstrip("/")
+AMD_PANEL = os.getenv("GATEWAY_AMD_PANEL", "http://192.168.1.5:2002").rstrip("/")
+OPEN_WEBUI = os.getenv("GATEWAY_OPEN_WEBUI", "http://127.0.0.1:3000").rstrip("/")
+PUBLIC_BASE = os.getenv("PUBLIC_GATEWAY_BASE", "https://sworn-profusely-alongside.ngrok-free.dev").rstrip("/")
+OPEN_WEBUI_PUBLIC = f"{PUBLIC_BASE}/openwebui"
 PORT = int(os.getenv("PUBLIC_GATEWAY_PORT", "5188"))
 
 app = FastAPI(title="Public Gateway", docs_url=None, redoc_url=None)
@@ -23,6 +39,36 @@ _client: httpx.AsyncClient | None = None
 
 
 def _http_target(path: str) -> str:
+    if path.startswith("/sre"):
+        return "http://127.0.0.1:8096"
+    if path.startswith("/ralfia-panel"):
+        return RAPHI_IA_PANEL
+    if path.startswith("/amd-panel"):
+        return AMD_PANEL
+    if path.startswith("/amd-ops-api"):
+        return AMD_OPS_API
+    if path.startswith("/amd-ops"):
+        return AMD_OPS_UI
+    if path.startswith("/openwebui"):
+        return OPEN_WEBUI
+    if path.startswith("/raphiia-auth"):
+        return RAPHI_IA_AUTH
+    if path.startswith("/raphiia-mcp/mcp/.well-known"):
+        return RAPHI_IA_AUTH
+    if path.startswith("/raphiia-mcp/.well-known"):
+        return RAPHI_IA_AUTH
+    if path.startswith("/.well-known/oauth-protected-resource"):
+        return RAPHI_IA_AUTH
+    if path.startswith("/raphiia-mcp"):
+        return RAPHI_IA_MCP
+    if path.startswith("/funding"):
+        return FUNDING_HUB
+    if path.startswith("/chutes-deposit"):
+        return CHUTES_DEPOSIT
+    if path.startswith("/uipath"):
+        return UIPATH_COPILOT
+    if path.startswith("/gitlab"):
+        return GITLAB_TRANSCEND
     if path.startswith("/inneros") or path.startswith("/datacenter"):
         return INNEROS
     if path.startswith("/api/v1"):
@@ -30,6 +76,11 @@ def _http_target(path: str) -> str:
     if path.startswith("/api/"):
         return os.getenv("GATEWAY_HACKATHON_API", "http://127.0.0.1:8200").rstrip("/")
     return HACKATHON
+
+
+def _openwebui_ws_url(path: str) -> str:
+    base = OPEN_WEBUI.replace("http://", "ws://").replace("https://", "wss://")
+    return urljoin(base + "/", path.lstrip("/"))
 
 
 def _ws_target(path: str) -> str:
@@ -41,12 +92,72 @@ def _ws_target(path: str) -> str:
 async def _startup() -> None:
     global _client
     _client = httpx.AsyncClient(follow_redirects=False, timeout=120.0)
+    # Si pierde LISTEN sin morir (zombie), systemd no reinicia. Auto-salida → Restart=always.
+    threading.Thread(target=_listen_watchdog, name="gw-listen-watch", daemon=True).start()
+
+
+def _listen_watchdog() -> None:
+    """Sale del proceso si :PORT deja de aceptar conexiones nuevas."""
+    grace = int(os.getenv("GATEWAY_WATCH_GRACE_SEC", "20"))
+    interval = int(os.getenv("GATEWAY_WATCH_INTERVAL_SEC", "15"))
+    fail_need = int(os.getenv("GATEWAY_WATCH_FAILS", "2"))
+    time.sleep(grace)
+    fails = 0
+    while True:
+        time.sleep(interval)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2.0)
+        try:
+            sock.connect(("127.0.0.1", PORT))
+            fails = 0
+        except OSError:
+            fails += 1
+            if fails >= fail_need:
+                # Forzar reinicio por systemd (Restart=always)
+                os._exit(78)
+        finally:
+            try:
+                sock.close()
+            except OSError:
+                pass
 
 
 @app.on_event("shutdown")
 async def _shutdown() -> None:
     if _client:
         await _client.aclose()
+
+
+@app.websocket("/openwebui/{rest:path}")
+async def openwebui_ws_proxy(websocket: WebSocket, rest: str) -> None:
+    forward = rest or ""
+    upstream_url = _openwebui_ws_url(forward)
+    await websocket.accept()
+    try:
+        async with websockets.connect(upstream_url) as upstream:
+            async def client_to_upstream() -> None:
+                try:
+                    while True:
+                        msg = await websocket.receive()
+                        if msg.get("type") == "websocket.disconnect":
+                            break
+                        if "text" in msg:
+                            await upstream.send(msg["text"])
+                        elif "bytes" in msg:
+                            await upstream.send(msg["bytes"])
+                except WebSocketDisconnect:
+                    pass
+
+            async def upstream_to_client() -> None:
+                async for message in upstream:
+                    if isinstance(message, bytes):
+                        await websocket.send_bytes(message)
+                    else:
+                        await websocket.send_text(message)
+
+            await asyncio.gather(client_to_upstream(), upstream_to_client())
+    except Exception:
+        await websocket.close()
 
 
 @app.websocket("/ws/{rest:path}")
@@ -85,12 +196,56 @@ async def ws_proxy(websocket: WebSocket, rest: str) -> None:
 async def http_proxy(full_path: str, request: Request) -> Response:
     assert _client is not None
     path = "/" + full_path if full_path else "/"
+    has_session = bool(request.headers.get("mcp-session-id"))
+    has_auth = bool(request.headers.get("authorization"))
+    if path == "/raphiia-mcp/mcp" and request.method in {"GET", "HEAD"} and not has_session and not has_auth:
+        metadata_url = f"{PUBLIC_BASE}/raphiia-mcp/mcp/.well-known/oauth-protected-resource"
+        return Response(
+            status_code=401,
+            headers={
+                "WWW-Authenticate": f'Bearer resource_metadata="{metadata_url}", scope="ralfia:read"',
+                "Cache-Control": "no-store",
+            },
+        )
     upstream = _http_target(path)
-    url = urljoin(upstream + "/", path.lstrip("/"))
+    forward_path = path
+    if path.startswith("/amd-ops-api"):
+        forward_path = path[len("/amd-ops-api"):] or "/"
+    elif path.startswith("/ralfia-panel"):
+        rest = path[len("/ralfia-panel"):] or "/"
+        forward_path = rest if rest.startswith("/") else "/" + rest
+    elif path.startswith("/amd-panel"):
+        rest = path[len("/amd-panel"):] or "/"
+        forward_path = rest if rest.startswith("/") else "/" + rest
+    elif path.startswith("/amd-ops"):
+        rest = path[len("/amd-ops"):] or "/"
+        forward_path = "/console" + (rest if rest.startswith("/") else "/" + rest)
+    elif path.startswith("/raphiia-auth"):
+        forward_path = path[len("/raphiia-auth"):] or "/"
+    elif path.startswith("/raphiia-mcp/mcp/.well-known"):
+        forward_path = path[len("/raphiia-mcp/mcp"):] or "/"
+    elif path.startswith("/raphiia-mcp/.well-known"):
+        forward_path = path[len("/raphiia-mcp"):] or "/"
+    elif path.startswith("/.well-known/oauth-protected-resource"):
+        forward_path = path
+    elif path.startswith("/raphiia-mcp"):
+        forward_path = path[len("/raphiia-mcp"):] or "/"
+    elif path.startswith("/chutes-deposit"):
+        forward_path = path[len("/chutes-deposit"):] or "/"
+    elif path.startswith("/uipath"):
+        forward_path = path[len("/uipath"):] or "/"
+    elif path.startswith("/openwebui"):
+        rest = path[len("/openwebui"):] or "/"
+        forward_path = rest if rest.startswith("/") else "/" + rest
+    url = urljoin(upstream + "/", forward_path.lstrip("/"))
     if request.url.query:
         url = f"{url}?{request.url.query}"
 
     headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+    if path.startswith("/openwebui"):
+        headers["X-Forwarded-Proto"] = "https"
+        headers["X-Forwarded-Prefix"] = "/openwebui"
+        headers["X-Forwarded-Host"] = request.headers.get("host", "")
     body = await request.body()
 
     try:

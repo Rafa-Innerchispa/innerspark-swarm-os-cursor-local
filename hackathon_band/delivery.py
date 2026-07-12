@@ -43,6 +43,45 @@ def deliver_report(
     )
 
 
+def _format_whatsapp_error(result: dict[str, Any] | None) -> str:
+    if not result:
+        return "sin respuesta"
+    msg = result.get("message")
+    if msg:
+        return str(msg)[:200]
+    resp = result.get("response")
+    if isinstance(resp, dict):
+        for key in ("message", "error", "detail"):
+            val = resp.get(key)
+            if val:
+                return str(val)[:200]
+    http = result.get("http_status")
+    if http:
+        return f"HTTP {http}"
+    return str(result)[:200]
+
+
+def _whatsapp_attachment(report_path: str, report_markdown: str) -> tuple[Path, str, str]:
+    """Prepara adjunto WhatsApp: PDF preferido (Evolution no admite .md bien)."""
+    from hackathon_band.report_pdf import markdown_to_pdf
+
+    md_path = Path(report_path)
+    pdf_path = md_path.with_suffix(".pdf")
+    md_text = report_markdown
+    if not md_text and md_path.is_file():
+        md_text = md_path.read_text(encoding="utf-8")
+    if md_text:
+        try:
+            markdown_to_pdf(md_text, pdf_path)
+            if pdf_path.is_file():
+                return pdf_path, "application/pdf", "PCDoctor_Band_Report.pdf"
+        except Exception:
+            pass
+    if md_path.is_file():
+        return md_path, "text/plain", "PCDoctor_Band_Report.txt"
+    return md_path, "text/plain", "PCDoctor_Band_Report.txt"
+
+
 def _deliver_whatsapp(
     question: str,
     report_path: str,
@@ -97,19 +136,23 @@ def _deliver_whatsapp(
                     continue
                 sent += 1
                 clog("success", "whatsapp", f"Summary → {result.get('number', num)}")
-                if Path(report_path).is_file():
+                attach_path, mime, fname = _whatsapp_attachment(report_path, report_markdown)
+                if attach_path.is_file():
                     doc = send_whatsapp_document(
                         num,
-                        report_path,
+                        attach_path,
                         caption=doc_caption,
                         instance=evo_inst or None,
-                        file_name="PCDoctor_Band_Report.md",
+                        file_name=fname,
+                        mimetype=mime,
                         skip_existence_check=True,
                     )
                     if doc.get("status") == "sent":
                         clog("success", "whatsapp", f"Attachment → {num}")
                     else:
-                        clog("error", "whatsapp", f"Attachment {num}: {doc.get('message', doc)[:120]}")
+                        clog("error", "whatsapp", f"Attachment {num}: {_format_whatsapp_error(doc)}")
+                else:
+                    clog("info", "whatsapp", f"No attachment file — link only for {num}")
             except Exception as exc:
                 clog("error", "whatsapp", f"{num}: {exc}")
         if sent:

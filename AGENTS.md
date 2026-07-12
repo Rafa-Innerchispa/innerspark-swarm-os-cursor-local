@@ -4,6 +4,9 @@
 
 ## Lee esto PRIMERO (orden obligatorio)
 
+0. [`/home/rlopez/data/ai_coordination/00_LEER_PRIMERO.md`](/home/rlopez/data/ai_coordination/00_LEER_PRIMERO.md) — coordinación RalfIA, puertos, logs (todos los proyectos)
+0b. [`/home/rlopez/data/ai_coordination/CHATS_Y_MEMORIA.md`](/home/rlopez/data/ai_coordination/CHATS_Y_MEMORIA.md) — chats vs Mongo
+
 1. [`docs/CONTINUIDAD_IA.md`](docs/CONTINUIDAD_IA.md) — guía maestra, backups, hackathon, continuidad
 2. [`docs/INSTRUCCIONES_AGENTE.md`](docs/INSTRUCCIONES_AGENTE.md) — cómo retomar sin romper nada
 3. [`docs/MAPA_PROYECTO.md`](docs/MAPA_PROYECTO.md) — visión, qué funciona, qué falta, decisiones tomadas
@@ -17,7 +20,8 @@
 
 ## Reglas al programar
 
-- **MongoDB** (`pcdoctor_swarm`) = fuente de verdad operativa. Notion = referencia humana.
+- **Servidor:** desarrollo solo en **`192.168.1.4`** vía Remote SSH — ver `docs/ACCESO_RED.md`
+- Al terminar sesión: `python /home/rlopez/projects/raphiia-openai/scripts/log_coordination.py --agent CURSOR --summary "..." --project innerspark-swarm-os`
 - **No mezclar** con `/home/rlopez/inneros/` (hackathon) ni `/home/rlopez/agentes/`.
 - **No copiar** lógica rota de Google AI Studio; solo plantillas/reglas.
 - **Cabecera ≠ líneas:** cotización = `quotes` + `quote_lines` (DB27/DB38).

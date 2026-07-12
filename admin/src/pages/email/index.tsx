@@ -53,6 +53,11 @@ type EmailMessage = {
   importance: string;
   whatsapp_sent: boolean;
   received_at: string;
+  suggested_action?: string;
+  route_area?: string;
+  route_collection?: string;
+  view_url?: string;
+  importance_reason?: string;
 };
 
 export function EmailMonitorPage() {
@@ -69,6 +74,7 @@ export function EmailMonitorPage() {
   const [providerNote, setProviderNote] = useState("");
   const [testingWa, setTestingWa] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [detailMail, setDetailMail] = useState<EmailMessage | null>(null);
   const [form] = Form.useForm();
   const [settingsForm] = Form.useForm();
 
@@ -111,6 +117,21 @@ export function EmailMonitorPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const openMailDetail = async (mailId: string) => {
+    try {
+      const doc = await fetchJson(`${API}/email/messages/${mailId}`);
+      setDetailMail(doc);
+    } catch (e) {
+      message.error(String(e));
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mailId = params.get("mail");
+    if (mailId) openMailDetail(mailId);
+  }, []);
 
   const saveSettings = async (v: Record<string, unknown>) => {
     try {
@@ -489,9 +510,55 @@ export function EmailMonitorPage() {
             { dataIndex: "subject", title: "Asunto", ellipsis: true },
             { dataIndex: "importance", title: "!", width: 80, render: (v: string) => <Tag color={impColor(v)}>{v}</Tag> },
             { dataIndex: "whatsapp_sent", title: "WA", width: 50, render: (v: boolean) => (v ? "✅" : "—") },
+            {
+              title: "Ver",
+              width: 70,
+              render: (_: unknown, row: EmailMessage) => (
+                <Button size="small" icon={<LinkOutlined />} onClick={() => openMailDetail(row.mail_id)} />
+              ),
+            },
           ]}
+          onRow={(row) => ({
+            onClick: () => openMailDetail(row.mail_id),
+            style: { cursor: "pointer" },
+          })}
         />
       </Card>
+
+      <Modal
+        title="Detalle del correo"
+        open={!!detailMail}
+        onCancel={() => setDetailMail(null)}
+        footer={[
+          <Button key="close" onClick={() => setDetailMail(null)}>Cerrar</Button>,
+          detailMail?.view_url ? (
+            <Button key="link" type="primary" icon={<LinkOutlined />} href={detailMail.view_url} target="_blank" rel="noreferrer">
+              Enlace directo
+            </Button>
+          ) : null,
+        ]}
+        width={720}
+      >
+        {detailMail && (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Typography.Text type="secondary">{detailMail.received_at?.slice(0, 19)} · {detailMail.account_address}</Typography.Text>
+            <Typography.Title level={5} style={{ margin: 0 }}>{detailMail.subject}</Typography.Title>
+            <Typography.Text>De: {detailMail.from_addr}</Typography.Text>
+            <Tag color={impColor(detailMail.importance)}>{detailMail.importance}</Tag>
+            {detailMail.importance_reason && <Typography.Text type="secondary">Motivo: {detailMail.importance_reason}</Typography.Text>}
+            {detailMail.suggested_action && (
+              <Alert
+                type="info"
+                showIcon
+                message={`Acción sugerida: ${detailMail.suggested_action.replace(/_/g, " ")}`}
+                description={`Área: ${detailMail.route_area || "—"} · Destino futuro: ${detailMail.route_collection || "email_messages"}`}
+              />
+            )}
+            <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>{detailMail.snippet}</Typography.Paragraph>
+            <Typography.Text copyable={{ text: detailMail.mail_id }}>ID: {detailMail.mail_id}</Typography.Text>
+          </Space>
+        )}
+      </Modal>
 
       <Modal title={pages.email.addAccount} open={open} onCancel={() => setOpen(false)} onOk={createAccount} width={600}
         footer={[

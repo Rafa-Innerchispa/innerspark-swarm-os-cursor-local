@@ -611,12 +611,88 @@ async def upload_company_logo(company_id: str, file: UploadFile = File(...)):
     return {"logo_file": fname, "url": f"/assets/branding/{fname}"}
 
 
+# --- Entities DB01 ---
+class EntityIn(BaseModel):
+    name: str
+    slug: str = ""
+    kind: str = "organization"  # organization | personal | platform
+    aliases: list[str] = Field(default_factory=list)
+    status: str = "active"
+    notes: str = ""
+    linkedin_author_urn: str = ""
+    linkedin_publish_as: str = ""  # person | organization
+
+
+@router.get("/entities")
+def list_entities(skip: int = 0, limit: int = 50):
+    return _list_collection("entities", "entity_id", skip, limit, "name")
+
+
+@router.get("/entities/{entity_id}")
+def get_entity(entity_id: str):
+    doc = _db().entities.find_one({"entity_id": entity_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "entidad no encontrada")
+    return doc
+
+
+@router.post("/entities")
+def create_entity(body: EntityIn):
+    if not body.name.strip():
+        raise HTTPException(400, "Nombre obligatorio")
+    slug = (body.slug or body.name).strip().lower().replace(" ", "-")
+    db = _db()
+    if db.entities.find_one({"slug": slug}):
+        raise HTTPException(409, "slug ya existe")
+    entity_id = new_id("ent")
+    now = _now()
+    doc = {
+        "entity_id": entity_id,
+        "slug": slug,
+        "name": body.name.strip(),
+        "kind": body.kind,
+        "aliases": body.aliases or [],
+        "status": body.status or "active",
+        "notes": body.notes or "",
+        "linkedin_author_urn": (body.linkedin_author_urn or "").strip(),
+        "linkedin_publish_as": (body.linkedin_publish_as or body.kind or "").strip(),
+        "created_at": now,
+        "updated_at": now,
+    }
+    db.entities.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.patch("/entities/{entity_id}")
+def update_entity(entity_id: str, body: EntityIn):
+    db = _db()
+    if not db.entities.find_one({"entity_id": entity_id}):
+        raise HTTPException(404, "entidad no encontrada")
+    patch = {
+        "name": body.name.strip(),
+        "kind": body.kind,
+        "aliases": body.aliases or [],
+        "status": body.status or "active",
+        "notes": body.notes or "",
+        "linkedin_author_urn": (body.linkedin_author_urn or "").strip(),
+        "linkedin_publish_as": (body.linkedin_publish_as or body.kind or "").strip(),
+        "updated_at": _now(),
+    }
+    if body.slug.strip():
+        patch["slug"] = body.slug.strip().lower()
+    db.entities.update_one({"entity_id": entity_id}, {"$set": patch})
+    doc = db.entities.find_one({"entity_id": entity_id}, {"_id": 0})
+    return doc
+
+
 # --- Meta ---
 @router.get("/stats")
 def admin_stats():
     db = _db()
     return {
         "clients": db.clients.count_documents({}),
+        "entities": db.entities.count_documents({}),
         "inventory_items": db.inventory_items.count_documents({}),
         "catalog_products": db.catalog_products.count_documents({}),
         "suppliers": db.suppliers.count_documents({}),

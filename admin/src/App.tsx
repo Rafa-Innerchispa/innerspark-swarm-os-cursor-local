@@ -16,6 +16,7 @@ import {
   FileSearchOutlined,
   MailOutlined,
   DeploymentUnitOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons";
 import { HackathonPage } from "./pages/hackathon";
 import { AppLayout } from "./components/AppLayout";
@@ -36,6 +37,7 @@ function AppRoutes() {
     () => [
       { name: "inneros", list: "/inneros", meta: { label: labels.inneros, icon: <DeploymentUnitOutlined /> } },
       { name: "datacenter", list: "/datacenter", meta: { label: labels.datacenter, icon: <CommentOutlined /> } },
+      { name: "entities", list: "/entities", meta: { label: labels.entities, icon: <ApartmentOutlined /> } },
       { name: "clients", list: "/clients", meta: { label: labels.clients, icon: <TeamOutlined /> } },
       { name: "inventory-items", list: "/inventory", meta: { label: labels.inventory, icon: <ShoppingOutlined /> } },
       { name: "catalog-products", list: "/catalog", meta: { label: labels.catalog, icon: <AppstoreOutlined /> } },
@@ -79,6 +81,7 @@ function AppRoutes() {
               <Route index element={<Dashboard />} />
               <Route path="/inneros" element={<HackathonPage />} />
               <Route path="/datacenter" element={<DataCenterPage />} />
+              <Route path="/entities" element={<ResourceList resource="entities" />} />
               <Route path="/clients" element={<ClientList />} />
               <Route path="/inventory" element={<ResourceList resource="inventory-items" />} />
               <Route path="/catalog" element={<ResourceList resource="catalog-products" />} />

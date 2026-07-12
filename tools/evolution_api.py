@@ -232,10 +232,11 @@ def send_whatsapp_document(
     caption: str = "",
     instance: str | None = None,
     file_name: str | None = None,
+    mimetype: str | None = None,
     *,
     skip_existence_check: bool = False,
 ) -> dict[str, Any]:
-    """Envía documento (.md, .pdf, etc.) por WhatsApp vía Evolution sendMedia."""
+    """Envía documento (.pdf, .txt, etc.) por WhatsApp vía Evolution sendMedia."""
     import base64
 
     path = Path(file_path)
@@ -252,9 +253,9 @@ def send_whatsapp_document(
     if len(raw) > 15_000_000:
         return {"status": "error", "message": "Archivo demasiado grande para WhatsApp"}
 
-    b64 = base64.b64encode(raw).decode("ascii")
     fname = file_name or path.name
-    media = f"data:text/markdown;base64,{b64}"
+    mime = mimetype or _guess_mimetype(path, fname)
+    b64 = base64.b64encode(raw).decode("ascii")
 
     try:
         r = requests.post(
@@ -263,10 +264,10 @@ def send_whatsapp_document(
             json={
                 "number": digits,
                 "mediatype": "document",
-                "mimetype": "text/markdown",
+                "mimetype": mime,
                 "fileName": fname,
                 "caption": (caption or "")[:900],
-                "media": media,
+                "media": b64,
                 "delay": 800,
             },
             timeout=60,
@@ -279,7 +280,19 @@ def send_whatsapp_document(
     try:
         body = r.json()
     except Exception:
-        body = {"raw": r.text[:500]}
+        body = {"raw": (r.text or "")[:500]}
+
+    err_msg: str | None = None
+    if not r.ok:
+        if isinstance(body, dict):
+            raw_msg = body.get("message") or body.get("error")
+            if isinstance(raw_msg, list):
+                err_msg = "; ".join(str(x) for x in raw_msg)
+            elif raw_msg:
+                err_msg = str(raw_msg)
+        if not err_msg:
+            err_msg = f"HTTP {r.status_code}"
+
     return {
         "status": "sent" if r.ok else "error",
         "http_status": r.status_code,
@@ -288,5 +301,15 @@ def send_whatsapp_document(
         "instance": inst,
         "instance_note": inst_note,
         "file": fname,
-        "message": body.get("message") if isinstance(body, dict) and not r.ok else None,
+        "message": err_msg,
     }
+
+
+def _guess_mimetype(path: Path, file_name: str) -> str:
+    ext = Path(file_name).suffix.lower() or path.suffix.lower()
+    return {
+        ".pdf": "application/pdf",
+        ".txt": "text/plain",
+        ".md": "text/plain",
+        ".json": "application/json",
+    }.get(ext, "application/octet-stream")

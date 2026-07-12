@@ -34,6 +34,7 @@ def _settings() -> dict:
             "whatsapp_numbers": [],
             "keywords_important": ["urgente", "factura", "pago", "vencido", "cotización", "reclamo", "falla"],
             "notify_on_high": True,
+            "email_view_base_url": "http://192.168.1.4:5173/email",
             "snippet_max": 300,
             "poll_max_per_account": 50,
             "initial_sync_max": 150,
@@ -47,6 +48,7 @@ class EmailSettingsIn(BaseModel):
     whatsapp_numbers: list[str] = []
     keywords_important: list[str] = []
     notify_on_high: bool = True
+    email_view_base_url: str = "http://192.168.1.4:5173/email"
     snippet_max: int = 300
 
 
@@ -195,6 +197,18 @@ def list_email_messages(skip: int = 0, limit: int = 50, importance: str | None =
     return {"data": data, "total": total}
 
 
+@router.get("/email/messages/{mail_id}")
+def get_email_message(mail_id: str):
+    db = _db()
+    doc = db.email_messages.find_one({"mail_id": mail_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "correo no encontrado")
+    settings = _settings()
+    base = (settings.get("email_view_base_url") or "http://192.168.1.4:5173/email").rstrip("/")
+    doc["view_url"] = f"{base}?mail={mail_id}"
+    return doc
+
+
 @router.post("/email/poll")
 def poll_all_accounts():
     """Revisa todas las cuentas activas — llamar desde cron cada 5 min."""
@@ -227,7 +241,7 @@ def poll_one_account(account_id: str):
 
 
 def _poll_one(acc: dict, settings: dict) -> dict[str, Any]:
-    from tools.email_agent import classify_importance, format_whatsapp_alert
+    from tools.email_agent import classify_importance, format_whatsapp_alert, suggest_routing
     from tools.email_imap import fetch_new_messages
     from tools.evolution_api import send_whatsapp
 
@@ -271,9 +285,18 @@ def _poll_one(acc: dict, settings: dict) -> dict[str, Any]:
             max_uid = max(max_uid, uid)
             continue
 
-        clf = classify_importance(m["subject"], m["snippet"], m["from_addr"], keywords)
+        clf = classify_importance(
+            m["subject"],
+            m["snippet"],
+            m["from_addr"],
+            keywords,
+            trusted_domains=settings.get("trusted_domains") or [],
+        )
+        routing = suggest_routing(m["subject"], m["snippet"], m["from_addr"])
+        mail_id = new_id("mail")
+        view_base = (settings.get("email_view_base_url") or "http://192.168.1.4:5173/email").rstrip("/")
         doc = {
-            "mail_id": new_id("mail"),
+            "mail_id": mail_id,
             "email_account_id": acc["email_account_id"],
             "account_address": acc["address"],
             "uid": uid,
@@ -284,6 +307,10 @@ def _poll_one(acc: dict, settings: dict) -> dict[str, Any]:
             "importance": clf["importance"],
             "importance_reason": clf.get("reason", ""),
             "classified_by": clf.get("source", ""),
+            "suggested_action": routing.get("suggested_action", ""),
+            "route_area": routing.get("route_area", ""),
+            "route_collection": routing.get("route_collection", ""),
+            "view_url": f"{view_base}?mail={mail_id}",
             "has_attachment": m.get("has_attachment", False),
             "whatsapp_sent": False,
             "received_at": _now(),
@@ -294,7 +321,15 @@ def _poll_one(acc: dict, settings: dict) -> dict[str, Any]:
 
         if settings.get("notify_on_high") and clf["importance"] == "alta" and whatsapp_nums:
             text = format_whatsapp_alert(
-                acc["address"], m["subject"], m["from_addr"], clf["importance"], clf.get("reason", ""),
+                acc["address"],
+                m["subject"],
+                m["from_addr"],
+                clf["importance"],
+                clf.get("reason", ""),
+                mail_id=mail_id,
+                view_url=view_base,
+                suggested_action=routing.get("suggested_action", ""),
+                route_area=routing.get("route_area", ""),
             )
             sent_any = False
             for num in whatsapp_nums:

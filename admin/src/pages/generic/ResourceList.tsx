@@ -9,6 +9,7 @@ import { useLang } from "../../i18n/LangContext";
 import { getApiBase } from "../../lib/api";
 
 const ROUTES: Record<string, string> = {
+  entities: "entities",
   clients: "clients",
   "inventory-items": "inventory-items",
   "catalog-products": "catalog-products",

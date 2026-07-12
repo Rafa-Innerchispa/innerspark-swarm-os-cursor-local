@@ -95,7 +95,7 @@ def build_whatsapp_message(
             f"🔍 *De tu memoria organizacional* ({memory_hits_count or len(hits or [])} fuentes):\n"
             f"{teaser_block}\n\n"
             f"⬇️ *Descargar reporte (.md):*\n{download}\n\n"
-            "📎 El archivo completo llega adjunto en el siguiente mensaje."
+            "📎 El PDF completo llega adjunto en el siguiente mensaje."
         )
 
     return (

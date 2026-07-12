@@ -8,7 +8,8 @@
       "desc": "Mini-ERP: clientes, inventario, cotizaciones, visitas. Trabajo operativo del negocio.",
       "port": 5173,
       "path": "",
-      "icon": "📋"
+      "icon": "📋",
+      "shared_port": true
     },
     {
       "id": "datacenter",
@@ -18,7 +19,8 @@
       "desc": "Crear y consultar por conversación. Probar micrófono Whisper aquí.",
       "port": 5173,
       "path": "/datacenter",
-      "icon": "💬"
+      "icon": "💬",
+      "shared_port": true
     },
     {
       "id": "files",
@@ -41,6 +43,48 @@
       "icon": "⚡"
     },
     {
+      "id": "raphiia-status",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Ralphi IA — Control Plane",
+      "desc": "Health/status del puente MCP y resumen operativo de MongoDB pcdoctor_swarm.",
+      "port": 8101,
+      "path": "/status",
+      "icon": "🧭"
+    },
+    {
+      "id": "raphiia-mcp",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Conector RalfIA MCP",
+      "desc": "Puente MCP para ChatGPT, Cursor y agentes (nombre técnico RalfIA). API protegida.",
+      "port": 8102,
+      "path": "/mcp",
+      "icon": "🔐",
+      "web": false
+    },
+    {
+      "id": "raphiia-auth",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "Ralphi IA OAuth",
+      "desc": "Servidor de autorizacion OAuth para ChatGPT Connector y clientes MCP externos.",
+      "port": 8103,
+      "path": "/health",
+      "icon": "🔑",
+      "web": false
+    },
+    {
+      "id": "smart-quoter",
+      "section": "Trabajo diario",
+      "company": "both",
+      "name": "InnerSpark Smart Quoter",
+      "desc": "Cotizaciones con audio, Whisper, Ollama, paquetes, PDF y envío preparado. Vertical: estudio fotográfico.",
+      "port": 2026,
+      "path": "/",
+      "icon": "💰"
+    },
+    {
       "id": "whisper",
       "section": "Voz y chat",
       "company": "innerchispa",
@@ -49,6 +93,66 @@
       "port": 9001,
       "path": "/docs",
       "icon": "🎙️"
+    },
+    {
+      "id": "hackathon-autopilot",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Hackathon Autopilot",
+      "desc": "Buscador global de código, elegibilidad y copiloto de hackatones.",
+      "port": 8090,
+      "path": "",
+      "icon": "✈️"
+    },
+    {
+      "id": "gitlab-transcend",
+      "section": "Seguridad",
+      "company": "innerchispa",
+      "name": "GitLab Transcend",
+      "desc": "Auditoría de seguridad y análisis estático continuo de repositorios GitLab.",
+      "port": 8095,
+      "path": "",
+      "icon": "🦊"
+    },
+    {
+      "id": "ralphi-sre",
+      "section": "Infraestructura",
+      "company": "innerchispa",
+      "name": "Ralphi SRE (Proyectos)",
+      "desc": "Automatización y orquestación de nuevos proyectos e infraestructura del servidor.",
+      "port": 8096,
+      "path": "",
+      "icon": "🛠️"
+    },
+    {
+      "id": "hackathon-band-ui",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Hackathon Band UI",
+      "desc": "Interfaz web para la postulación y gestión de equipos en hackatones.",
+      "port": 5190,
+      "path": "",
+      "icon": "🎸"
+    },
+    {
+      "id": "swarm-os-google-ai-studio",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Google AI Studio Swarm",
+      "desc": "Entorno Node.js integrado con la API de Gemini para procesamiento y generación.",
+      "port": 5180,
+      "path": "",
+      "icon": "♊"
+    },
+    {
+      "id": "hackathon-funding-hub",
+      "section": "Inteligencia artificial",
+      "company": "innerchispa",
+      "name": "Hackathon & Funding Hub",
+      "desc": "Conecta hackatones y fondos de capital con demos locales reales para conseguir financiamiento.",
+      "port": 8099,
+      "path": "",
+      "icon": "💰"
     }
   ],
   "services": [
@@ -184,6 +288,16 @@
       "path": "",
       "icon": "🐘",
       "web": false
+    },
+    {
+      "id": "hackathon-band-api",
+      "section": "Automatización",
+      "company": "innerchispa",
+      "name": "Hackathon Band API",
+      "desc": "API para las integraciones y flujos del equipo de hackatón.",
+      "port": 8200,
+      "path": "/docs",
+      "icon": "🔌"
     }
   ]
 }

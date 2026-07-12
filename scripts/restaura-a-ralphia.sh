@@ -121,8 +121,8 @@ start_docker() {
   if [[ -f /home/rlopez/whisper-service/docker-compose.yml ]]; then
     (cd /home/rlopez/whisper-service && docker compose up -d) || true
   fi
-  if [[ -f /home/rlopez/inneros/docker-compose.yml ]]; then
-    (cd /home/rlopez/inneros && docker compose up -d) || true
+  if [[ -f /home/rlopez/projects/inneros/docker-compose.yml ]]; then
+    (cd /home/rlopez/projects/inneros && docker compose up -d) || true
   fi
   if [[ -f "$PROJECT/docker/filebrowser-compose.yml" ]]; then
     docker compose -f "$PROJECT/docker/filebrowser-compose.yml" up -d || true

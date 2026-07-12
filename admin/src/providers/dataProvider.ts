@@ -5,6 +5,7 @@ const API = getApiBase();
 
 /** Mapeo recurso Refine → endpoint FastAPI */
 const routes: Record<string, string> = {
+  entities: "entities",
   clients: "clients",
   "inventory-items": "inventory-items",
   "catalog-products": "catalog-products",

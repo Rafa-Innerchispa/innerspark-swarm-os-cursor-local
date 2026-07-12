@@ -11,6 +11,24 @@ export const RESOURCE_CONFIG: Record<
   string,
   { title: string; idField: string; columns: string[]; fields: FieldDef[] }
 > = {
+  entities: {
+    title: "Entidades / marcas (DB01)",
+    idField: "entity_id",
+    columns: ["entity_id", "name", "slug", "kind", "status"],
+    fields: [
+      { name: "name", label: "Nombre", required: true },
+      { name: "slug", label: "Slug (URL)", required: true },
+      {
+        name: "kind",
+        label: "Tipo",
+        type: "select",
+        options: ["organization", "personal", "platform"],
+        default: "organization",
+      },
+      { name: "status", label: "Estado", default: "active" },
+      { name: "notes", label: "Notas", type: "textarea" },
+    ],
+  },
   "inventory-items": {
     title: "Inventario hardware (DB26)",
     idField: "item_code",

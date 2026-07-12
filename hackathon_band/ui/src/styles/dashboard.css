@@ -22,6 +22,8 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
@@ -40,9 +42,17 @@ body,
 .dashboard {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 1440px;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 2rem;
+  overflow-x: hidden;
+}
+
+.col-main,
+.col-side {
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .dash-header {
@@ -306,6 +316,7 @@ body,
   font-family: var(--mono);
   font-size: 0.72rem;
   line-height: 1.5;
+  overflow-x: hidden;
   overflow-y: auto;
   max-height: 480px;
 }
@@ -486,7 +497,32 @@ code {
   font-size: 0.88rem;
   line-height: 1.55;
   max-height: 360px;
+  overflow-x: hidden;
   overflow-y: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body pre,
+.markdown-body code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+.markdown-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.report-panel {
+  overflow: hidden;
 }
 
 .markdown-body h1,
