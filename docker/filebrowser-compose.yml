@@ -4,9 +4,10 @@ services:
     container_name: filebrowser
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "127.0.0.1:18081:80"
     volumes:
       - /home/rlopez:/srv
+      - /mnt/datos_agentes:/srv/datos_agentes:ro
       - filebrowser_config:/config
     command:
       - --root=/srv
