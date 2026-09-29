@@ -1,0 +1,16 @@
+[Unit]
+Description=Ralphi IA File Browser SSO Gateway (:8081)
+After=network.target ralfia-portal.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rlopez/inneros/inneros_core/workspaces/innerspark-swarm-os-cursor-local
+Environment=FILEBROWSER_BACKEND=http://127.0.0.1:18081
+Environment=PORTAL_LOGIN_URL=http://192.168.1.4:2002/login
+Environment=FILEBROWSER_AUTH_HEADER=X-Remote-User
+ExecStart=/home/rlopez/projects/innerspark-swarm-os-cursor-local/venv/bin/uvicorn filebrowser_sso_gateway:app --host 0.0.0.0 --port 8081
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
